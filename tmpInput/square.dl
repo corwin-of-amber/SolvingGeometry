@@ -1,0 +1,13 @@
+#include <GeometryRules.dl>
+TypeOf("l1", "line").
+TypeOf("l2", "line").
+
+In("A", "l1").
+In("B", "l1").
+In("C", "l2").
+In("B", "l2").
+
+Dist("A", "B", "dist").
+Dist("A", "D", "dist").
+Dist("B", "C", "dist").
+Dist("C", "D", "dist").

@@ -1,0 +1,7 @@
+#include <GeometryRules.dl>
+Dist("X", "Y", "dist").
+Dist("Z", "Y", "dist").
+
+Known("X").
+Known("Z").
+Known("dist").

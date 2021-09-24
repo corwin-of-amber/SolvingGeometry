@@ -1,17 +1,40 @@
 # Goal: Make the first example work (Isosceles triangle)
+#TODO:
+# V use csv module
+# V parse files to create facts in memory and only then write to file
+# V Go back to triangle example and make it work
+# - make square example work
+# - Go back to triangle example and make sure it work
+# Take care of "error loading file" errors in souffle (for example create empty files)
+# Should I do something more? listen to recording\ go over my notes
+# Take care of input - from spec to dl file/ facts files
+
+# Questions:
+# Can two relations share the same fact?
 
 import os
 import shutil
 import re
+import csv
 
 class Relation:
     def __init__(self, name, should_delete_symmetry=False):
         self.name = name
-        self.objects = []
+        self.facts = []
         self.make_name = "Make" + name
         # should_delete_symmetry can refer only to relations with exactly 2 parameters
         self.should_delete_symmetry = should_delete_symmetry
 
+
+class Fact:
+    def __init__(self, relation, params, is_new=True):
+        self.relation = relation
+        self.params = params
+        self.is_new = is_new
+        self.id = self.relation.name.lower() + str(len(self.relation.facts) + 1)
+        
+    def __eq__(self, other):
+        return (self.params == other.params) and (self.relation.name == self.relation.name)
 
 # These are relations that has "make" relations (to help create their data)
 make_relations = [Relation("Circle"),
@@ -19,75 +42,112 @@ make_relations = [Relation("Circle"),
 
 exercise_name = "triangle"
 souffle_in_dir = os.path.join("souffleFiles", exercise_name)
-script = "triangle.dl"
+script = os.path.join("tmpInput", exercise_name + ".dl")
 souffle_out_dir = os.path.join("souffleFiles", exercise_name)
 
-def get_obj_from_line(line):
-    return line.strip("\n").split("\t")
-
-
 def run_souffle():
-    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir}".format(souffle_in_dir=souffle_in_dir, script=script, souffle_out_dir=souffle_out_dir))
+    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
 def add_facts_to_relation(rel):
-    # The function read outpus of last souffle run, look for new objects from 'make' relations, and create appropriate facts. Return True if a new fact was added
+    # TODO: Seperate to two phases: first create facts, then write to files (according to relations)
+    # The function read outpus of last souffle run, look for new facts from 'make' relations, and create appropriate facts. Return True if a new fact was added
     is_new_object = False
 
     # Read output file of the make relation
     r_out_path = os.path.join(souffle_out_dir, rel.make_name + ".csv")
     lines = []
-    if (os.path.isfile(r_out_path)):
-        with open(r_out_path, "r") as f:
-            lines = f.readlines()
+    if (not os.path.isfile(r_out_path)):
+        return is_new_object
     
-    # look for new objects and write them as input for the relation
+    # Look for new facts and add them to the relation
+    f = open(r_out_path, "r")
+    csv_reader = csv.reader(f, delimiter="\t")
+    for row in csv_reader:
+        # Create new fact
+        new_fact = Fact(rel, row)
+        # Check if we have already seen this object
+        #TODO: Maybe there is a better way (like comparing the id)
+        if new_fact in rel.facts:
+            continue
+        if rel.should_delete_symmetry:
+            # Don't add this fact if the symmetric fact has already been added
+            a, b = row
+            symmetric_fact = Fact(rel, [b, a])
+            if symmetric_fact in rel.facts:
+                continue
+        is_new_object = True
+        rel.facts.append(new_fact)
+    
+    f.close()
+    
+    # Add the new facts to the relation input file
     in_file = open(os.path.join(souffle_in_dir, rel.name + ".facts"), "a")
+    csv_writer = csv.writer(in_file, delimiter="\t")
+    for fact in rel.facts:
+        if fact.is_new:
+            fact.is_new = False
+            csv_writer.writerow(fact.params + [fact.id])
+    """
     for i, line in enumerate(lines):
         # Check if we have already seen this object
-        if line in rel.objects:
+        if line in rel.facts:
             continue
         if rel.should_delete_symmetry:
             a, b = get_obj_from_line(line)
             symmetric_line = "{b}\t{a}\n".format(b=b, a=a)
-            if symmetric_line in rel.objects:
+            if symmetric_line in rel.facts:
                 continue
         # Create new object in the facts file
-        rel.objects.append(line)
+        rel.facts.append(line)
         is_new_object = True
         line_to_write = "{params}\t{name}{id}\n".format(params=line.strip("\n"), name=rel.name.lower(), id=i)
         in_file.write(line_to_write)
+    """ 
+    in_file.close()
     return is_new_object
 
-def get_locus_from_dimenstion(dimension, loci):
-    # Helper function for getting the best locus of an  object
-    f = open(os.path.join(souffle_out_dir, "Dimension" + dimension + ".csv"), "r")
-    for line in f.readlines():
-        locus = get_obj_from_line(line)[0]
-        if locus in loci:
-            f.close()
-            return locus
-    f.close()
-
-def get_best_locus(obj_id):
-    # Get an object id, return a locus id with minimal dimension from all the loci the object is in.
-    # If the object isn't in any locus - return  None
+def find_all_locations(obj_id):
+    # Get an object id, return list of locations it's in
+    #TODO: Use csv module  here as well
     loci = []
     f = open(os.path.join(souffle_out_dir, "In.csv"), "r")
-    for line in f.readlines():
-        obj, locus_id = get_obj_from_line(line)
+    csv_reader = csv.reader(f, delimiter="\t")
+    for row in csv_reader:
+        obj, locus_id = row
         if obj == obj_id:
             loci.append(locus_id)
     f.close()
+    return loci
 
-    dimension0_locus = get_locus_from_dimenstion("0", loci)
-    if dimension0_locus:
-        return dimension0_locus
-        
-    dimension1_locus = get_locus_from_dimenstion("1", loci)
-    if dimension1_locus:
-        return dimension1_locus
+def get_best_locus(loci):
+    # Get list of possible locations, return  a known one with minimal dimension
+    # If the object isn't in any known locus - return  None
+
+    f = open(os.path.join(souffle_out_dir, "KnownDimension" + ".csv"), "r")
+    csv_reader = csv.reader(f, delimiter="\t")
+    
+    # TODO: Improve this code (finding lowest dimension)
+    locus_from_dim0 = None
+    locus_from_dim1 = None
+    
+    for row in csv_reader:
+        locus = row[0]
+        dim = int(row[1])
+        if locus in loci:
+            if dim == 0:
+                locus_from_dim0 = locus
+            if dim == 1:
+                locus_from_dim1 = locus
+    f.close()
+    
+    if locus_from_dim0:
+        return locus_from_dim0
+    if locus_from_dim1:
+        return  locus_from_dim1
+
 
 def create_folder():
+    #TODO: create empty facts files
     if (os.path.isdir(souffle_out_dir)):
         shutil.rmtree(souffle_out_dir)
     os.mkdir(souffle_out_dir)
@@ -126,13 +186,20 @@ def move_input_to_folder():
         if file_name.endswith(".facts"):
             shutil.copyfile(os.path.join(in_dir, file_name), os.path.join(souffle_in_dir, file_name))
 
-create_folder()
-output_var = parse_spec() # Currentlhy parse spec only gives the output variables
-move_input_to_folder()
-deductive_synthesis()
-for var in output_var:
-    best_locus = get_best_locus(var)
-    if best_locus:
-        print(var + " is inside this locus: " + best_locus)
-    else:
-        print("Couldn't find a locus for " + var)
+def main():
+    create_folder()
+    #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
+    output_vars = ['Y']
+    #move_input_to_folder()
+    deductive_synthesis()
+    for var in output_vars:
+        loci = find_all_locations(var)
+        best_locus = get_best_locus(loci)
+        if best_locus:
+            print(var + " is inside this locus: " + best_locus)
+        else:
+            print("Couldn't find a locus for " + var)
+        
+        
+main()
+#add_facts_to_relation(make_relations[0])
