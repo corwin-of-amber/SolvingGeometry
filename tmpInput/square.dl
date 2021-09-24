@@ -11,3 +11,6 @@ Dist("A", "B", "dist").
 Dist("A", "D", "dist").
 Dist("B", "C", "dist").
 Dist("C", "D", "dist").
+
+Known("A").
+Known("B").

@@ -20,6 +20,8 @@
 .decl Intersection(locus1: symbol, locus2: symbol, id: symbol)
 .input Intersection
 
+.decl SubsetOf(subset:symbol, superset:symbol)
+
 .decl In(point: symbol, locus: symbol)
 .output In
 
@@ -52,10 +54,16 @@ Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf(l1, "line"), TypeOf(l2, "line"), In(a, l
 
 // -- Arithmetics rules --
 Dist(a, b, d):- Dist(b, a, d).
-// Note: added some conditions to prevent infinite recursion
-MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !Intersection(c1,_,c2), !Intersection(c2, _, c1), !Intersection(_, c1, c2), !Intersection(_, c2, c1).
-  
 
+// Create intersections only between objects that aren't both from dimension 0
+MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !(Dimension(c1, 0); Dimension(c2, 0)).
+//TODO: Delete SubsetOf relation  or use it
+//MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2,!SubsetOf(c1,c2), !SubsetOf(c2, c1).
+//!(SubsetOf(l, c1); SubsetOf(l , c2)).
+  
+SubsetOf(subset, superset):-Intersection(_, superset, subset).
+SubsetOf(subset, superset):-Intersection(superset, _, subset).
+SubsetOf(subset, superset):-SubsetOf(subset, l), SubsetOf(l, superset).
 
 In(b, c):- Dist(b, a, d), Circle(a, d, c).
 In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
@@ -66,6 +74,7 @@ Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
 Known(dist):-Known(a), Known(b), Dist(a, b, dist).
 
 
+Dimension(i, 1):-TypeOf(i, "line").
 Dimension(i, 1):-Circle(_, __, i).
 Dimension(i, 0):-Intersection(a, b, i), Dimension(a, 1), Dimension(b, 1), a!= b.
 

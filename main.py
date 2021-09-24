@@ -5,10 +5,11 @@
 # V Go back to triangle example and make it work
 # - make square example work
 # - Go back to triangle example and make sure it work
+# Numeric search\ hill climbing
 # Take care of "error loading file" errors in souffle (for example create empty files)
 # Should I do something more? listen to recording\ go over my notes
 # Take care of input - from spec to dl file/ facts files
-
+# Handle exception in case souffle has error (catch it somehow and return niec output)
 # Questions:
 # Can two relations share the same fact?
 
@@ -16,6 +17,13 @@ import os
 import shutil
 import re
 import csv
+
+exercise_name = "triangle"
+souffle_main_dir = "souffleFiles"
+souffle_in_dir = os.path.join(souffle_main_dir, exercise_name)
+script = os.path.join("tmpInput", exercise_name + ".dl")
+souffle_out_dir = os.path.join(souffle_main_dir, exercise_name)
+
 
 class Relation:
     def __init__(self, name, should_delete_symmetry=False):
@@ -39,11 +47,6 @@ class Fact:
 # These are relations that has "make" relations (to help create their data)
 make_relations = [Relation("Circle"),
             Relation("Intersection", should_delete_symmetry=True)]
-
-exercise_name = "triangle"
-souffle_in_dir = os.path.join("souffleFiles", exercise_name)
-script = os.path.join("tmpInput", exercise_name + ".dl")
-souffle_out_dir = os.path.join("souffleFiles", exercise_name)
 
 def run_souffle():
     os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=script, souffle_out_dir=souffle_out_dir, include_dir="."))
@@ -148,6 +151,8 @@ def get_best_locus(loci):
 
 def create_folder():
     #TODO: create empty facts files
+    if (not os.path.isdir(souffle_main_dir)):
+        os.mkdir(souffle_main_dir)
     if (os.path.isdir(souffle_out_dir)):
         shutil.rmtree(souffle_out_dir)
     os.mkdir(souffle_out_dir)
