@@ -1,9 +1,7 @@
-//R("dist(A,B,d)", "in(B, circle(A,d)) & [!=](A,B)", title="dist-1")
-  
-  
 .decl Dist(a: symbol, b: symbol, d:symbol)
 Dist(a, b, d):- Dist(b, a, d).
-  
+.input Dist
+
 .decl MakeCircle(center: symbol, radius: symbol)
 MakeCircle(a, d):- Dist(a, _, d).
   
@@ -12,16 +10,6 @@ MakeCircle(a, d):- Dist(a, _, d).
 .decl Circle(center: symbol, radius: symbol, id:symbol)
 .input Circle
 .output Circle
-  
-
-  
-Known("a").
-Known("b").
-Dist("a", "c", "dist").
-Dist("b", "c", "dist").
-//Circle("a", "dist", "circ1").
-//Circle("b", "dist", "circ2").
-Known("dist").
   
 .output In
   
@@ -45,11 +33,12 @@ In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
 .decl Known(a: symbol)
 Known(c):- Circle(a, d, c), Known(a), Known(d).
 Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
+.input Known
 
 .decl Dimension1(id: symbol)
 Dimension1(i):-Circle(_, __, i).
 .output Dimension1
 
 .decl Dimension0(id: symbol)
-Dimension0(i):-Intersection(a, b, i), Dimension1(a), Dimension1(b).
+Dimension0(i):-Intersection(a, b, i), Dimension1(a), Dimension1(b), a!= b.
 .output Dimension0
