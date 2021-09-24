@@ -1,44 +1,72 @@
-.decl Dist(a: symbol, b: symbol, d:symbol)
-Dist(a, b, d):- Dist(b, a, d).
-.input Dist
-
+// Declarations
 .decl MakeCircle(center: symbol, radius: symbol)
-MakeCircle(a, d):- Dist(a, _, d).
-  
 .output MakeCircle
-   
 .decl Circle(center: symbol, radius: symbol, id:symbol)
 .input Circle
-.output Circle
-  
-.output In
   
   
+.decl Angle(a:symbol, b:symbol, c:symbol, angle:symbol)
+
+.decl Perp(l1:symbol, l2:symbol)
+
+.decl MakeLine(a:symbol, b:symbol)
+.input MakeLine
+
+.decl Dist(a: symbol, b: symbol, d:symbol)
+.input Dist
+
 .decl MakeIntersection(locus1: symbol, locus2: symbol)
-// Note: added some conditions to prevent infinite recursion  (perhaps should do it from the outside)
-MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !Intersection(c1,_,c2), !Intersection(c2, _, c1), !Intersection(_, c1, c2), !Intersection(_, c2, c1).
-  
 .output MakeIntersection
-  
-  
 .decl Intersection(locus1: symbol, locus2: symbol, id: symbol)
 .input Intersection
-//Intersection("circ1", "circ2", "i1").
-//Intersection("circ2", "circ1", "i2").
 
 .decl In(point: symbol, locus: symbol)
+.output In
+
+.decl Known(a: symbol)
+.input Known
+.output Known
+
+.decl Dimension(id: symbol, dim: number)
+.output Dimension
+
+.decl KnownDimension(id: symbol, dim: number)
+.output KnownDimension
+
+.decl TypeOf(a:symbol, type:symbol)
+
+
+// -- Circle --
+MakeCircle(a, d):- Dist(a, _, d).
+
+
+// Angle
+//R("angle(A,B,C,[:90:]) & in(A,l1) & in(B,l1) & in(B,l2) & //in(C,l2)"
+//         " & typeof(l1,[:line:]) & typeof(l2,[:line:])", 
+//          "perp(l1, l2)", title="angle90-lines"),
+
+
+
+Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf(l1, "line"), TypeOf(l2, "line"), In(a, l1), In(c, l2), In(b, l1), In(b, l2).
+
+
+// -- Arithmetics rules --
+Dist(a, b, d):- Dist(b, a, d).
+// Note: added some conditions to prevent infinite recursion
+MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !Intersection(c1,_,c2), !Intersection(c2, _, c1), !Intersection(_, c1, c2), !Intersection(_, c2, c1).
+  
+
+
 In(b, c):- Dist(b, a, d), Circle(a, d, c).
 In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
   
-.decl Known(a: symbol)
+
 Known(c):- Circle(a, d, c), Known(a), Known(d).
 Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
-.input Known
+Known(dist):-Known(a), Known(b), Dist(a, b, dist).
 
-.decl Dimension1(id: symbol)
-Dimension1(i):-Circle(_, __, i).
-.output Dimension1
 
-.decl Dimension0(id: symbol)
-Dimension0(i):-Intersection(a, b, i), Dimension1(a), Dimension1(b), a!= b.
-.output Dimension0
+Dimension(i, 1):-Circle(_, __, i).
+Dimension(i, 0):-Intersection(a, b, i), Dimension(a, 1), Dimension(b, 1), a!= b.
+
+KnownDimension(id, dim):-Dimension(id, dim), Known(id).
