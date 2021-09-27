@@ -10,7 +10,7 @@
 .decl Perp(l1:symbol, l2:symbol)
 
 .decl MakeLine(a:symbol, b:symbol)
-.input MakeLine
+.output MakeLine
 
 .decl Dist(a: symbol, b: symbol, d:symbol)
 
@@ -22,6 +22,7 @@
 .decl SubsetOf(subset:symbol, superset:symbol)
 
 .decl In(point: symbol, locus: symbol)
+.input In
 .output In
 
 .decl Known(a: symbol)
@@ -35,7 +36,7 @@
 .output KnownDimension
 
 .decl TypeOf(type:symbol, id:symbol)
-
+.input TypeOf
 
 // -- Circle --
 MakeCircle(a, d):- Dist(a, _, d).

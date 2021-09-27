@@ -3,6 +3,7 @@
 # V parse files to create facts in memory and only then write to file
 # V Go back to triangle example and make it work
 # V Make 0-dimension-search work (emit new 'known' fact
+# - In case of MakeLine - create 2 Ins + 1 TypeOf (and remove it from the square.dl)
 # - make square example work
 # - Numeric search\ hill climbing
 # - Take care of "error loading file" errors in souffle (for example create empty files)
@@ -16,23 +17,93 @@ import os
 import shutil
 import re
 import csv
+# Notice: should download sympy
+from sympy.geometry import Point, Circle, intersection
 
 SAMLPES = {"triangle": ["Y"], "square": ["C", "D"], "test": ["W", "Y"]}
 
-EXERCISE_NAME = "test"
+EXERCISE_NAME = "square"
 souffle_main_dir = "souffleFiles"
 souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
 souffle_out_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 
 
-class Relation:
-    def __init__(self, name, should_delete_symmetry=False):
+class Location:
+    def __init__(self, name, is_make_relation=False, should_delete_symmetry=False):
         self.name = name
         self.facts = []
-        self.make_name = "Make" + name
+        self.is_make_relation = is_make_relation
+        if is_make_relation:
+            self.make_name = "Make" + name
         # should_delete_symmetry can refer only to relations with exactly 2 parameters
         self.should_delete_symmetry = should_delete_symmetry
+        
+        
+    def make(self):
+        # Write new facts to relevant input files for deduction
+        # The function read outpus of last souffle run, look for new facts from 'make' relations, and create appropriate facts. Return True if a new fact was added
+        if not self.is_make_relation:
+            return
+
+        is_new_object = False
+
+        # Read output file of the make relation
+        r_out_path = os.path.join(souffle_out_dir, self.make_name + ".csv")
+        lines = []
+        if (not os.path.isfile(r_out_path)):
+            return is_new_object
+        
+        # Look for new facts and add them to the relation
+        f = open(r_out_path, "r")
+        csv_reader = csv.reader(f, delimiter="\t")
+        for row in csv_reader:
+            # Create new fact
+            new_fact = Fact(self, row)
+            # Check if we have already seen this object
+            #TODO: Maybe there is a better way (like comparing the id)
+            if new_fact in self.facts:
+                continue
+            if self.should_delete_symmetry:
+                # Don't add this fact if the symmetric fact has already been added
+                a, b = row
+                symmetric_fact = Fact(self, [b, a])
+                if symmetric_fact in self.facts:
+                    continue
+            is_new_object = True
+            self.facts.append(new_fact)
+        
+        f.close()
+        
+        if self.name == "Line":
+            in_file = open(os.path.join(souffle_in_dir, "TypeOf" + ".facts"), "a")
+            csv_writer = csv.writer(in_file, delimiter="\t")
+            for fact in self.facts:
+                if fact.is_new:
+                    # Notice - this fact will be marked with 'not-new' later
+                    # fact.is_new = False
+                    csv_writer.writerow(["line", fact.id])
+            in_file.close()
+            in_file = open(os.path.join(souffle_in_dir, "In" + ".facts"), "a")
+            csv_writer = csv.writer(in_file, delimiter="\t")
+            for fact in self.facts:
+                if fact.is_new:
+                    fact.is_new = False
+                    csv_writer.writerow([fact.params[0], fact.id])
+                    csv_writer.writerow([fact.params[1], fact.id])
+            in_file.close()        
+            return is_new_object
+        
+        # Add the new facts to the relation input file
+        in_file = open(os.path.join(souffle_in_dir, self.name + ".facts"), "a")
+        csv_writer = csv.writer(in_file, delimiter="\t")
+        for fact in self.facts:
+            if fact.is_new:
+                fact.is_new = False
+                csv_writer.writerow(fact.params + [fact.id])
+        in_file.close()
+        return is_new_object
+
 
 
 class Fact:
@@ -45,56 +116,15 @@ class Fact:
     def __eq__(self, other):
         return (self.params == other.params) and (self.relation.name == self.relation.name)
 
+locations = {"Circle": Location("Circle", is_make_relation=True), "Intersection": Location("Intersection", is_make_relation=True, should_delete_symmetry=True), "Line": Location("Line", is_make_relation=True)}
 # These are relations that has "make" relations (to help create their data)
-make_relations = [Relation("Circle"),
-            Relation("Intersection", should_delete_symmetry=True)]
+make_relations = [rel for rel in locations.values() if rel.is_make_relation]
 
 def run_souffle():
     os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
-def add_facts_to_relation(rel):
-    # The function read outpus of last souffle run, look for new facts from 'make' relations, and create appropriate facts. Return True if a new fact was added
-    is_new_object = False
-
-    # Read output file of the make relation
-    r_out_path = os.path.join(souffle_out_dir, rel.make_name + ".csv")
-    lines = []
-    if (not os.path.isfile(r_out_path)):
-        return is_new_object
-    
-    # Look for new facts and add them to the relation
-    f = open(r_out_path, "r")
-    csv_reader = csv.reader(f, delimiter="\t")
-    for row in csv_reader:
-        # Create new fact
-        new_fact = Fact(rel, row)
-        # Check if we have already seen this object
-        #TODO: Maybe there is a better way (like comparing the id)
-        if new_fact in rel.facts:
-            continue
-        if rel.should_delete_symmetry:
-            # Don't add this fact if the symmetric fact has already been added
-            a, b = row
-            symmetric_fact = Fact(rel, [b, a])
-            if symmetric_fact in rel.facts:
-                continue
-        is_new_object = True
-        rel.facts.append(new_fact)
-    
-    f.close()
-    
-    # Add the new facts to the relation input file
-    in_file = open(os.path.join(souffle_in_dir, rel.name + ".facts"), "a")
-    csv_writer = csv.writer(in_file, delimiter="\t")
-    for fact in rel.facts:
-        if fact.is_new:
-            fact.is_new = False
-            csv_writer.writerow(fact.params + [fact.id])
-    in_file.close()
-    return is_new_object
-
 def find_all_locations(obj_id):
-    # Get an object id, return list of locations it's in
+    # Get an object id, parse datalog output and return list of locations it's in
     loci = []
     f = open(os.path.join(souffle_out_dir, "In.csv"), "r")
     csv_reader = csv.reader(f, delimiter="\t")
@@ -150,8 +180,7 @@ def deductive_synthesis():
         print("Running souffle...")
         run_souffle()
         for rel in make_relations:
-            if add_facts_to_relation(rel):
-                is_new_object = True
+            is_new_object = rel.make()
 
 def parse_spec():
     # Open spec file and parse it. Return  output variable if exist
@@ -213,6 +242,28 @@ def is_search_completed(output_vars, locus_per_var):
             return False
     return True
     
+def find_fact_for_locus(locus_id, relation_name):
+    # Read from souffle.
+    # Question: is it enough to take rel.facts?
+    f = open(os.path.join(souffle_in_dir, relation_name + ".csv"), "r")
+    csv_reader = csv.reader(f, delimiter="\t")
+    for row in csv_reader:
+        # The locus id is always the last word in the row
+        if row[-1] == locus_id:
+            return  row
+    
+    
+    
+def find_zero_dimension_locus(locus_id):
+    relation_name = re.compile("(\D+)\d+").findall(locus_id)
+    # Make the first letter capital
+    relation_name = relation_name[0].upper() + relation_name[1:]
+    locus_fact = find_fact_for_locus(locus_id, relation_name)
+    assert(locus_fact)
+    # TODO: Continue this
+    
+    
+    
 def deductive_synthesis_and_numeric_search(output_vars):
     while True:
         deductive_synthesis()
@@ -225,12 +276,14 @@ def deductive_synthesis_and_numeric_search(output_vars):
             print("Not found output var with known location")
             return
         if dim == 0:
+            find_zero_dimension_locus(locus)
             # Emit a known fact for this var, and run the deductive part again
             f = open(os.path.join(souffle_in_dir, "Known.facts"), "a")
             csv_writer = csv.writer(f, delimiter="\t")
             csv_writer.writerow([var])
             f.close()
             output_vars.remove(var)
+            # TODO: find actual location (like intersection of circles)
         else:
             # TODO: Add  hill-climbing algorithm here
             return

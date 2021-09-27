@@ -1,16 +1,20 @@
 #include <GeometryRules.dl>
-TypeOf("l1", "line").
-TypeOf("l2", "line").
+//TypeOf("line", "line1").
+//TypeOf("line", "line2").
+MakeLine("A", "B").
+MakeLine("B", "C").
 
-In("A", "l1").
-In("B", "l1").
-In("C", "l2").
-In("B", "l2").
+//In("A", "line1").
+//In("B", "line1").
+//In("C", "line2").
+//In("B", "line2").
 
 Dist("A", "B", "dist").
 Dist("A", "D", "dist").
 Dist("B", "C", "dist").
 Dist("C", "D", "dist").
+
+Angle("A", "D", "C","90").
 
 Known("A").
 Known("B").
