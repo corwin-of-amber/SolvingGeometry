@@ -1,10 +1,10 @@
 #TODO:
 # V use csv module
 # V parse files to create facts in memory and only then write to file
-# V Go back to triangle example and make it work
 # V Make 0-dimension-search work (emit new 'known' fact
-# - In case of MakeLine - create 2 Ins + 1 TypeOf (and remove it from the square.dl)
+# V In case of MakeLine - create 2 Ins + 1 TypeOf
 # - make square example work
+# - Use Geometric module to actually find the points in the intersection
 # - Numeric search\ hill climbing
 # - Take care of "error loading file" errors in souffle (for example create empty files)
 # - listen to recording\ go over my notes
@@ -29,7 +29,7 @@ script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
 souffle_out_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 
 
-class Location:
+class LocationType:
     def __init__(self, name, is_make_relation=False, should_delete_symmetry=False):
         self.name = name
         self.facts = []
@@ -39,13 +39,7 @@ class Location:
         # should_delete_symmetry can refer only to relations with exactly 2 parameters
         self.should_delete_symmetry = should_delete_symmetry
         
-        
-    def make(self):
-        # Write new facts to relevant input files for deduction
-        # The function read outpus of last souffle run, look for new facts from 'make' relations, and create appropriate facts. Return True if a new fact was added
-        if not self.is_make_relation:
-            return
-
+    def _find_new_facts(self):
         is_new_object = False
 
         # Read output file of the make relation
@@ -74,7 +68,9 @@ class Location:
             self.facts.append(new_fact)
         
         f.close()
-        
+        return is_new_object
+    
+    def _write_new_facts(self):
         if self.name == "Line":
             in_file = open(os.path.join(souffle_in_dir, "TypeOf" + ".facts"), "a")
             csv_writer = csv.writer(in_file, delimiter="\t")
@@ -92,8 +88,6 @@ class Location:
                     csv_writer.writerow([fact.params[0], fact.id])
                     csv_writer.writerow([fact.params[1], fact.id])
             in_file.close()        
-            return is_new_object
-        
         # Add the new facts to the relation input file
         in_file = open(os.path.join(souffle_in_dir, self.name + ".facts"), "a")
         csv_writer = csv.writer(in_file, delimiter="\t")
@@ -102,8 +96,15 @@ class Location:
                 fact.is_new = False
                 csv_writer.writerow(fact.params + [fact.id])
         in_file.close()
+        
+    def make(self):
+        # Write new facts to relevant input files for deduction
+        # The function read outpus of last souffle run, look for new facts from 'make' relations, and create appropriate facts. Return True if a new fact was added
+        if not self.is_make_relation:
+            return
+        is_new_object = self._find_new_facts()
+        self._write_new_facts()
         return is_new_object
-
 
 
 class Fact:
@@ -116,7 +117,7 @@ class Fact:
     def __eq__(self, other):
         return (self.params == other.params) and (self.relation.name == self.relation.name)
 
-locations = {"Circle": Location("Circle", is_make_relation=True), "Intersection": Location("Intersection", is_make_relation=True, should_delete_symmetry=True), "Line": Location("Line", is_make_relation=True)}
+locations = {"Circle": LocationType("Circle", is_make_relation=True), "Intersection": LocationType("Intersection", is_make_relation=True, should_delete_symmetry=True), "Line": LocationType("Line", is_make_relation=True)}
 # These are relations that has "make" relations (to help create their data)
 make_relations = [rel for rel in locations.values() if rel.is_make_relation]
 
@@ -210,8 +211,9 @@ def best_locus_for_each_var(output_vars):
     locus_per_var = {}
     for var in output_vars:
         loci = find_all_locations(var)
-        best_locus, best_dim = get_best_locus(loci)
-        if best_locus:
+        res = get_best_locus(loci)
+        if res:
+            best_locus, best_dim = res
             print(var + " is inside this locus: " + best_locus)
             locus_per_var[var] = (best_locus, best_dim)
         else:
@@ -242,6 +244,7 @@ def is_search_completed(output_vars, locus_per_var):
             return False
     return True
     
+"""    
 def find_fact_for_locus(locus_id, relation_name):
     # Read from souffle.
     # Question: is it enough to take rel.facts?
@@ -251,16 +254,22 @@ def find_fact_for_locus(locus_id, relation_name):
         # The locus id is always the last word in the row
         if row[-1] == locus_id:
             return  row
-    
+""" 
     
     
 def find_zero_dimension_locus(locus_id):
-    relation_name = re.compile("(\D+)\d+").findall(locus_id)
+    # Since this is zero dimension, expect locus name to be intersection
+    locus_name = re.compile("(\D+)\d+").findall(locus_id)
     # Make the first letter capital
-    relation_name = relation_name[0].upper() + relation_name[1:]
-    locus_fact = find_fact_for_locus(locus_id, relation_name)
-    assert(locus_fact)
-    # TODO: Continue this
+    locus_name = locus_name[0].upper() + locus_name[1:]
+    locus = locations[locus_name]
+    # All the relavent locations are already in the facts list in memory
+    for fact in locus.facts:
+        if fact.id == locus_id:
+            # TODO: Continue this
+            return
+    raise AssertionError
+    
     
     
     
