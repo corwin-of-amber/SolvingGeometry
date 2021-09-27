@@ -87,7 +87,8 @@ class LocationType:
                     fact.is_new = False
                     csv_writer.writerow([fact.params[0], fact.id])
                     csv_writer.writerow([fact.params[1], fact.id])
-            in_file.close()        
+            in_file.close()
+            return
         # Add the new facts to the relation input file
         in_file = open(os.path.join(souffle_in_dir, self.name + ".facts"), "a")
         csv_writer = csv.writer(in_file, delimiter="\t")
@@ -181,7 +182,8 @@ def deductive_synthesis():
         print("Running souffle...")
         run_souffle()
         for rel in make_relations:
-            is_new_object = rel.make()
+            if rel.make():
+                is_new_object = True
 
 def parse_spec():
     # Open spec file and parse it. Return  output variable if exist
