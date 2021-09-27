@@ -13,7 +13,6 @@
 .input MakeLine
 
 .decl Dist(a: symbol, b: symbol, d:symbol)
-.input Dist
 
 .decl MakeIntersection(locus1: symbol, locus2: symbol)
 .output MakeIntersection
@@ -35,7 +34,7 @@
 .decl KnownDimension(id: symbol, dim: number)
 .output KnownDimension
 
-.decl TypeOf(a:symbol, type:symbol)
+.decl TypeOf(type:symbol, id:symbol)
 
 
 // -- Circle --
@@ -47,9 +46,7 @@ MakeCircle(a, d):- Dist(a, _, d).
 //         " & typeof(l1,[:line:]) & typeof(l2,[:line:])", 
 //          "perp(l1, l2)", title="angle90-lines"),
 
-
-
-Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf(l1, "line"), TypeOf(l2, "line"), In(a, l1), In(c, l2), In(b, l1), In(b, l2).
+Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf("line", l1), TypeOf("line", l2), In(a, l1), In(c, l2), In(b, l1), In(b, l2).
 
 
 // -- Arithmetics rules --
@@ -72,9 +69,10 @@ In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
 Known(c):- Circle(a, d, c), Known(a), Known(d).
 Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
 Known(dist):-Known(a), Known(b), Dist(a, b, dist).
+Known(l):-Known(l2),(Perp(l, l2);Perp(l2, l)).
 
 
-Dimension(i, 1):-TypeOf(i, "line").
+Dimension(i, 1):-TypeOf("line", i).
 Dimension(i, 1):-Circle(_, __, i).
 Dimension(i, 0):-Intersection(a, b, i), Dimension(a, 1), Dimension(b, 1), a!= b.
 
