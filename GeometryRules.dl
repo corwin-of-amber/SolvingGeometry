@@ -19,7 +19,7 @@
 .decl Intersection(locus1: symbol, locus2: symbol, id: symbol)
 .input Intersection
 
-.decl SubsetOf(subset:symbol, superset:symbol)
+//.decl SubsetOf(subset:symbol, superset:symbol)
 
 .decl In(point: symbol, locus: symbol)
 .input In
@@ -38,30 +38,49 @@
 .decl TypeOf(type:symbol, id:symbol)
 .input TypeOf
 
+
 // -- Circle --
 MakeCircle(a, d):- Dist(a, _, d).
 
-
-// Angle
-//R("angle(A,B,C,[:90:]) & in(A,l1) & in(B,l1) & in(B,l2) & //in(C,l2)"
-//         " & typeof(l1,[:line:]) & typeof(l2,[:line:])", 
-//          "perp(l1, l2)", title="angle90-lines"),
-
+// -- Angle --
+MakeRaythru(a,b):-AngleCcw(a, b, _, __).
+MakeRaythru(b,c):-AngleCcw(_, b, c, __).
+AngleCcwRays(ray0, ray1, angle):-AngleCcw(a, b, c, angle), Raythru(b,a,ray0), Raythru(b,c,ray1).
+Known(angle):-AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
+        
 Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf("line", l1), TypeOf("line", l2), In(a, l1), In(c, l2), In(b, l1), In(b, l2).
+// Is this a good rule? maybe change to this:
+// R("perp(u,v) & typeof(v,[:vec*R:]) & Known(u)", "Known(v)", title="orth")
+Known(l):-Known(l2),(Perp(l, l2);Perp(l2, l)).
 
+// -- Ray --
+//R("raythru(X,Y,ray)", 
+//  "typeof(ray,[:ray:]) & in(X,ray) & in(Y,ray) & origin(ray,X) "
+//  " & [ray<](ray,X,Y) & [!=](X,Y)"
+//  " & vpar(ray,u) & typeof(u, [:vec*R+:])", title="raythru-def"),
+//R("typeof(ray,[:ray:]) & in(X,ray) & in(Y,ray) & [ray<](ray,X,Y)",
+//  "vpar(ray, Y-X)", title="ray-2in"),
+// raythru definition
+//MakeVec(),MakeRay(ray):-Raythru(a, b, ray)
+//Origin(ray0, a),In(a, ray0), In(b, ray0):-Raythru(a, b, raythu), Ray(raythu, ray0).
+Known(ray):-Raythru(a, b, ray), Known(a), Known(b).
+
+// ray rotate (ccw)
+AngleCcwVecs(u0, u1, angle):-Ray(_, __, ray0), Ray(___, ____, ray1), AngleCcwRays(ray0, ray1, angle), Vpar(ray0, u0), Vpar(ray1, u1).
+Known(v):-AngleCcwVecs(u, v, angle), Vpar(_, v), Known(u), Known(angle). //TODO: consider using typeof instead of vpar (since vector isn't necessary vpar)
+Known(u):-AngleCcwVecs(u, v, angle), Vpar(_, u), Known(v), Known(angle). //TODO: same here
 
 // -- Arithmetics rules --
 Dist(a, b, d):- Dist(b, a, d).
 
 // Create intersections only between objects that aren't both from dimension 0
 MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !(Dimension(c1, 0); Dimension(c2, 0)).
-//TODO: Delete SubsetOf relation  or use it
 //MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2,!SubsetOf(c1,c2), !SubsetOf(c2, c1).
 //!(SubsetOf(l, c1); SubsetOf(l , c2)).
   
-SubsetOf(subset, superset):-Intersection(_, superset, subset).
-SubsetOf(subset, superset):-Intersection(superset, _, subset).
-SubsetOf(subset, superset):-SubsetOf(subset, l), SubsetOf(l, superset).
+//SubsetOf(subset, superset):-Intersection(_, superset, subset).
+//SubsetOf(subset, superset):-Intersection(superset, _, subset).
+//SubsetOf(subset, superset):-SubsetOf(subset, l), SubsetOf(l, superset).
 
 In(b, c):- Dist(b, a, d), Circle(a, d, c).
 In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
@@ -70,7 +89,6 @@ In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
 Known(c):- Circle(a, d, c), Known(a), Known(d).
 Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
 Known(dist):-Known(a), Known(b), Dist(a, b, dist).
-Known(l):-Known(l2),(Perp(l, l2);Perp(l2, l)).
 
 
 Dimension(i, 1):-TypeOf("line", i).

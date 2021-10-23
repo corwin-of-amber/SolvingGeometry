@@ -1,13 +1,7 @@
 #TODO:
-# V use csv module
-# V parse files to create facts in memory and only then write to file
-# V Make 0-dimension-search work (emit new 'known' fact
-# V In case of MakeLine - create 2 Ins + 1 TypeOf
 # - make square example work
 # - Use Geometric module to actually find the points in the intersection
-# - Numeric search\ hill climbing
 # - Take care of "error loading file" errors in souffle (for example create empty files)
-# - listen to recording\ go over my notes
 # - Take care of input - from spec to dl file/ facts files
 # - Handle exception in case souffle has error (catch it somehow and return niec output)
 # Questions:
@@ -18,11 +12,21 @@ import shutil
 import re
 import csv
 # Notice: should download sympy
-from sympy.geometry import Point, Circle, intersection
+#from sympy.geometry import Point, Circle, Line, intersection
 
-SAMLPES = {"triangle": ["Y"], "square": ["C", "D"], "test": ["W", "Y"]}
+class Sample:
+    def __init__(self, name, output_vars, symbols):
+        # Note: right now symbols doesnt do anything (the goal is to give numeric values to the symbols)
+        self.name = name
+        self.output_vars = output_vars
+        self.symbols = symbols
 
-EXERCISE_NAME = "square"
+SAMPLES = {"triangle": Sample("triangle", ["Y"], {"X": (0, 0), "Z":(1, 0), "dist": 1}),
+        "myTriangle": Sample("myTriangle", ["W", "Y"], {"X": (0, 0), "Z":(1, 0), "dist": 1}),
+        "square": Sample("square", ["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
+        "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols=None)}
+
+EXERCISE_NAME = "myTriangle"
 souffle_main_dir = "souffleFiles"
 souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
@@ -118,7 +122,11 @@ class Fact:
     def __eq__(self, other):
         return (self.params == other.params) and (self.relation.name == self.relation.name)
 
-locations = {"Circle": LocationType("Circle", is_make_relation=True), "Intersection": LocationType("Intersection", is_make_relation=True, should_delete_symmetry=True), "Line": LocationType("Line", is_make_relation=True)}
+locations = {
+                "Circle": LocationType("Circle", is_make_relation=True),
+                "Intersection": LocationType("Intersection", is_make_relation=True, should_delete_symmetry=True),
+                "Line": LocationType("Line", is_make_relation=True)
+            }
 # These are relations that has "make" relations (to help create their data)
 make_relations = [rel for rel in locations.values() if rel.is_make_relation]
 
@@ -163,7 +171,7 @@ def get_best_locus(loci):
     if locus_from_dim0:
         return locus_from_dim0, best_dim
     if locus_from_dim1:
-        return  locus_from_dim1, best_dim
+        return locus_from_dim1, best_dim
 
 
 def create_folder():
@@ -174,7 +182,7 @@ def create_folder():
         shutil.rmtree(souffle_out_dir)
     os.mkdir(souffle_out_dir)
 
-def deductive_synthesis():
+def deductive_synthesis_iteration():
     # Run souffle iteratively, until there aren't new facts in the make relations
     is_new_object = True
     while is_new_object:
@@ -259,51 +267,79 @@ def find_fact_for_locus(locus_id, relation_name):
 """ 
     
     
-def find_zero_dimension_locus(locus_id):
-    # Since this is zero dimension, expect locus name to be intersection
-    locus_name = re.compile("(\D+)\d+").findall(locus_id)
+def get_geometric_locus(locus_id, symbols):
+    # Get a locus id and dict of symbols with their real values.
+    # Return  an object of the geometric location
+    locus_type = re.compile("(\D+)\d+").findall(locus_id)[0]
     # Make the first letter capital
-    locus_name = locus_name[0].upper() + locus_name[1:]
-    locus = locations[locus_name]
+    locus_type = locus_type[0].upper() + locus_type[1:]
+    locus = locations[locus_type]
     # All the relavent locations are already in the facts list in memory
     for fact in locus.facts:
         if fact.id == locus_id:
-            # TODO: Continue this
+            # TODO: Should I check somewhere if the locus is  known?
+            if locus_type == "Circle":
+                point_name = fact.params[0]
+                radius_name = fact.params[1]
+                return Circle(Point(*symbols[point_name]), symbols[radius_name])
+                # Should somehow get real coordinates and distance
+                # Circle(point, radius)
+            if locus_type == "Intersection":
+                locus1_name = fact.params[0]
+                locus2_name = fact.params[1]
+                return intersection(get_geometric_locus(locus1_name, symbols), get_geometric_locus(locus2_name, symbols))
+            if locus_type == "Line":
+                point1_name = facts.params[0]
+                point2_name = facts.params[1]
+                return Line(Point(*symbols[point1_name]), Point(*symbols[point2_name]))
             return
     raise AssertionError
     
-    
-    
-    
-def deductive_synthesis_and_numeric_search(output_vars):
-    while True:
-        deductive_synthesis()
+# The function  emits a known fact for the best var possible, in order to run the deductive part again
+def emit_known_fact_for_best_var(output_vars, symbols, locus_per_var):
+    # Return is_done
+    var, locus, dim = get_best_output_var(output_vars, locus_per_var)
+    if not var:
+        print("Not found output var with known location")
+        # In this case we aren't done, but there isn't a way to progress (maybe should assert here?)
+        return True
+    # geometric_locus = get_geometric_locus(locus, symbols)
+    # print("Geometric locus for var {0} is {1}".format(var, geometric_locus))
+    print("Emit: {} to known  facts".format(var))
+    f = open(os.path.join(souffle_in_dir, "Known.facts"), "a")
+    csv_writer = csv.writer(f, delimiter="\t")
+    csv_writer.writerow([var])
+    f.close()
+    output_vars.remove(var)
+    #symbols[var] = geometric_locus[0] # This line is  temporary
+    return False
+
+# The function create the partial program for the numeric search algorithm
+def deductive_synthesis(exercise):
+    output_vars = exercise.output_vars.copy()
+    is_done = False
+    out_prog = ""
+    while not is_done:
+        deductive_synthesis_iteration()
         locus_per_var = best_locus_for_each_var(output_vars)
         if is_search_completed(output_vars, locus_per_var):
+            # In this case all output vars has 0 dimension
             print("Search completed")
-            return
-        var, locus, dim = get_best_output_var(output_vars, locus_per_var)
-        if not var:
-            print("Not found output var with known location")
-            return
-        if dim == 0:
-            find_zero_dimension_locus(locus)
-            # Emit a known fact for this var, and run the deductive part again
-            f = open(os.path.join(souffle_in_dir, "Known.facts"), "a")
-            csv_writer = csv.writer(f, delimiter="\t")
-            csv_writer.writerow([var])
-            f.close()
-            output_vars.remove(var)
-            # TODO: find actual location (like intersection of circles)
-        else:
-            # TODO: Add  hill-climbing algorithm here
-            return
+            #for var in output_vars:
+            #    locus, dim = locus_per_var[var]
+            #    print("Geometric locus for var {0} is {1}".format(var, get_geometric_locus(locus, symbols)))
+            
+            break
+        is_done = emit_known_fact_for_best_var(output_vars=output_vars,
+                                                symbols=exercise.symbols,
+                                                locus_per_var=locus_per_var)
+    return out_prog
 
 def main():
     create_folder()
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
-    output_vars = SAMLPES[EXERCISE_NAME]
+    exercise = SAMPLES[EXERCISE_NAME]
     #move_input_to_folder()
-    deductive_synthesis_and_numeric_search(output_vars)
+    deductive_synthesis(exercise)
         
 main()
