@@ -21,12 +21,12 @@ class Sample:
         self.output_vars = output_vars
         self.symbols = symbols
 
-SAMPLES = {"triangle": Sample("triangle", ["Y"], {"X": (0, 0), "Z":(1, 0), "dist": 1}),
-        "myTriangle": Sample("myTriangle", ["W", "Y"], {"X": (0, 0), "Z":(1, 0), "dist": 1}),
-        "square": Sample("square", ["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
+SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "dist": 1}),
+        "myTriangle": Sample("myTriangle", output_vars=["W", "Y"], symbols={"X": (0, 0), "Z":(1, 0), "dist": 1}),
+        "square": Sample("square", output_vars=["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
         "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols=None)}
 
-EXERCISE_NAME = "square"
+EXERCISE_NAME = "myTriangle"
 souffle_main_dir = "souffleFiles"
 souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
@@ -255,7 +255,7 @@ def is_search_completed(output_vars, locus_per_var):
         if locus_per_var[var][1] != 0:
             return False
     return True
-    
+   
 """    
 def find_fact_for_locus(locus_id, relation_name):
     # Read from souffle.
@@ -267,15 +267,49 @@ def find_fact_for_locus(locus_id, relation_name):
         if row[-1] == locus_id:
             return  row
 """ 
-    
+
+def get_locus_type_from_name(locus_name):
+    locus_type = re.compile("(\D+)\d+").findall(locus_name)[0]
+    # Make the first letter capital
+    locus_type = locus_type[0].upper() + locus_type[1:]
+    return locations[locus_type]
+    return locus_type
+
+def get_locus_as_string(locus_name):
+    locus_type = get_locus_type_from_name(locus_name)
+    # All the relavent locations are already in the facts list in memory        
+    for fact in locus_type.facts:
+        if fact.id == locus_name:
+            # TODO: Should I check somewhere if the locus is  known?
+            #TODO2: should this be a function inside Locus object?
+            
+            # locus has 2 parameters
+            if (locus_type.name == "Circle") or (locus_type.name == "Line"):
+                return "{locus}({param0},{param1})".format(locus=locus_type.name,param0=fact.params[0], param1=fact.params[1])
+            if locus_type.name == "Intersection":
+                locus1_name = fact.params[0]
+                locus2_name = fact.params[1]
+                return [":intersection", get_locus_as_string(locus1_name), get_locus_as_string(locus2_name)]
+    raise AssertionError 
+
+
+class PartialProg:
+    def __init__(self):
+        self.known = {}
+        self.rules = []
+    def add_in_rule(self, var, locus_name, dim):
+        locus_string = get_locus_as_string(locus_name)
+        self.rules.append([":in", var, locus_string])
+    def add_known(self, symbols):
+        self.known = symbols
+    def to_str(self):
+        return "known = {}\n rules = {}".format(str(self.known), str(self.rules))
     
 def get_geometric_locus(locus_id, symbols):
     # Get a locus id and dict of symbols with their real values.
     # Return  an object of the geometric location
-    locus_type = re.compile("(\D+)\d+").findall(locus_id)[0]
-    # Make the first letter capital
-    locus_type = locus_type[0].upper() + locus_type[1:]
-    locus = locations[locus_type]
+    locus = get_locus_type_from_name(locus_id)
+    locus_type = locus.name
     # All the relavent locations are already in the facts list in memory
     for fact in locus.facts:
         if fact.id == locus_id:
@@ -298,13 +332,7 @@ def get_geometric_locus(locus_id, symbols):
     raise AssertionError
     
 # The function  emits a known fact for the best var possible, in order to run the deductive part again
-def emit_known_fact_for_best_var(output_vars, symbols, locus_per_var):
-    # Return is_done
-    var, locus, dim = get_best_output_var(output_vars, locus_per_var)
-    if not var:
-        print("Not found output var with known location")
-        # In this case we aren't done, but there isn't a way to progress (maybe should assert here?)
-        return True
+def emit_known_fact(output_vars, var):
     # geometric_locus = get_geometric_locus(locus, symbols)
     # print("Geometric locus for var {0} is {1}".format(var, geometric_locus))
     print("Emit: {} to known  facts".format(var))
@@ -314,16 +342,22 @@ def emit_known_fact_for_best_var(output_vars, symbols, locus_per_var):
     f.close()
     output_vars.remove(var)
     #symbols[var] = geometric_locus[0] # This line is  temporary
-    return False
 
 # The function create the partial program for the numeric search algorithm
-def deductive_synthesis(exercise):
+def deductive_synthesis(exercise, partial_prog):
     output_vars = exercise.output_vars.copy()
     is_done = False
-    out_prog = ""
     while not is_done:
         deductive_synthesis_iteration()
         locus_per_var = best_locus_for_each_var(output_vars)
+        var, locus, dim = get_best_output_var(output_vars, locus_per_var)
+        if not var:
+            print("Not found output var with known location")
+            # In this case we aren't done, but there isn't a way to progress (maybe should assert here?)
+            is_done = True
+        partial_prog.add_in_rule(var, locus, dim)
+        emit_known_fact(output_vars=output_vars,
+                        var=var)
         if is_search_completed(output_vars, locus_per_var):
             # In this case all output vars has 0 dimension
             print("Search completed")
@@ -332,16 +366,17 @@ def deductive_synthesis(exercise):
             #    print("Geometric locus for var {0} is {1}".format(var, get_geometric_locus(locus, symbols)))
             
             break
-        is_done = emit_known_fact_for_best_var(output_vars=output_vars,
-                                                symbols=exercise.symbols,
-                                                locus_per_var=locus_per_var)
-    return out_prog
 
 def main():
     create_folder()
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     exercise = SAMPLES[EXERCISE_NAME]
     #move_input_to_folder()
-    deductive_synthesis(exercise)
+    partial_prog = PartialProg()
+    # Note: symbols is a dict we should get from the front
+    partial_prog.add_known(exercise.symbols)
+    deductive_synthesis(exercise, partial_prog)
+    print("Partial program is: ")
+    print(partial_prog.to_str())
         
 main()
