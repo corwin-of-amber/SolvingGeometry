@@ -26,7 +26,7 @@ SAMPLES = {"triangle": Sample("triangle", ["Y"], {"X": (0, 0), "Z":(1, 0), "dist
         "square": Sample("square", ["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
         "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols=None)}
 
-EXERCISE_NAME = "myTriangle"
+EXERCISE_NAME = "square"
 souffle_main_dir = "souffleFiles"
 souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
@@ -125,7 +125,9 @@ class Fact:
 locations = {
                 "Circle": LocationType("Circle", is_make_relation=True),
                 "Intersection": LocationType("Intersection", is_make_relation=True, should_delete_symmetry=True),
-                "Line": LocationType("Line", is_make_relation=True)
+                "Line": LocationType("Line", is_make_relation=True),
+                "Raythru": LocationType("Raythru", is_make_relation=True)
+                #"Ray": LocationType("Ray", is_make_relation=True)
             }
 # These are relations that has "make" relations (to help create their data)
 make_relations = [rel for rel in locations.values() if rel.is_make_relation]

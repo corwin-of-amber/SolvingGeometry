@@ -1,4 +1,6 @@
 // Declarations
+.decl Vpar(ray:symbol, vec:symbol)
+
 .decl MakeCircle(center: symbol, radius: symbol)
 .output MakeCircle
 .decl Circle(center: symbol, radius: symbol, id:symbol)
@@ -6,9 +8,24 @@
   
   
 .decl Angle(a:symbol, b:symbol, c:symbol, angle:symbol)
+.decl AngleCcw(a:symbol, b:symbol, c:symbol, angle:symbol)
+.decl AngleCcwRays(ray0:symbol, ray1:symbol, angle:symbol)
 
 .decl Perp(l1:symbol, l2:symbol)
 
+.decl MakeRay(origin:symbol, direction:symbol)
+.output MakeRay
+.decl Ray(origin:symbol, direction:symbol, id:symbol)
+.input Ray
+
+.decl MakeRaythru(a:symbol, b:symbol)
+.output MakeRaythru
+.decl Raythru(a:symbol, b:symbol, id:symbol)
+.input Raythru
+
+.decl AngleCcwVecs(u0:symbol,  u1:symbol, angle:symbol)
+
+//TODO: Should I delete this?
 .decl MakeLine(a:symbol, b:symbol)
 .output MakeLine
 
@@ -93,6 +110,7 @@ Known(dist):-Known(a), Known(b), Dist(a, b, dist).
 
 Dimension(i, 1):-TypeOf("line", i).
 Dimension(i, 1):-Circle(_, __, i).
+Dimension(i, 1):-Raythru(_, __, i).
 Dimension(i, 0):-Intersection(a, b, i), Dimension(a, 1), Dimension(b, 1), a!= b.
 
 KnownDimension(id, dim):-Dimension(id, dim), Known(id).
