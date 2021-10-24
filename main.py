@@ -1,6 +1,4 @@
 #TODO:
-# - make square example work
-# - Use Geometric module to actually find the points in the intersection
 # - Take care of "error loading file" errors in souffle (for example create empty files)
 # - Take care of input - from spec to dl file/ facts files
 # - Handle exception in case souffle has error (catch it somehow and return niec output)
@@ -16,7 +14,7 @@ import csv
 
 class Sample:
     def __init__(self, name, output_vars, symbols):
-        # Note: right now symbols doesnt do anything (the goal is to give numeric values to the symbols)
+        # Note: symbols should come from the front
         self.name = name
         self.output_vars = output_vars
         self.symbols = symbols
@@ -289,7 +287,7 @@ def get_locus_as_string(locus_name):
             if locus_type.name == "Intersection":
                 locus1_name = fact.params[0]
                 locus2_name = fact.params[1]
-                return [":intersection", get_locus_as_string(locus1_name), get_locus_as_string(locus2_name)]
+                return get_locus_as_string(locus1_name) + ", " + get_locus_as_string(locus2_name)
     raise AssertionError 
 
 
@@ -299,7 +297,7 @@ class PartialProg:
         self.rules = []
     def add_in_rule(self, var, locus_name, dim):
         locus_string = get_locus_as_string(locus_name)
-        self.rules.append([":in", var, locus_string])
+        self.rules.append([":in", var, [locus_string]])
     def add_known(self, symbols):
         self.known = symbols
     def to_str(self):
@@ -352,20 +350,15 @@ def deductive_synthesis(exercise, partial_prog):
         locus_per_var = best_locus_for_each_var(output_vars)
         var, locus, dim = get_best_output_var(output_vars, locus_per_var)
         if not var:
-            print("Not found output var with known location")
-            # In this case we aren't done, but there isn't a way to progress (maybe should assert here?)
-            is_done = True
+            # In this case there is no way to progress
+            raise AssertionError("Not found output var with known location")
         partial_prog.add_in_rule(var, locus, dim)
         emit_known_fact(output_vars=output_vars,
                         var=var)
         if is_search_completed(output_vars, locus_per_var):
             # In this case all output vars has 0 dimension
             print("Search completed")
-            #for var in output_vars:
-            #    locus, dim = locus_per_var[var]
-            #    print("Geometric locus for var {0} is {1}".format(var, get_geometric_locus(locus, symbols)))
-            
-            break
+            is_done = True
 
 def main():
     create_folder()
