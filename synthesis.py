@@ -19,12 +19,12 @@ class Sample:
         self.output_vars = output_vars
         self.symbols = symbols
 
-SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "dist": 1}),
-        "myTriangle": Sample("myTriangle", output_vars=["W", "Y"], symbols={"X": (0, 0), "Z":(1, 0), "dist": 1}),
+SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
+        "myTriangle": Sample("myTriangle", output_vars=["W", "Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
         "square": Sample("square", output_vars=["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
         "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols=None)}
 
-EXERCISE_NAME = "myTriangle"
+EXERCISE_NAME = "pentagon"
 souffle_main_dir = "souffleFiles"
 souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
@@ -71,35 +71,32 @@ class LocationType:
         
         f.close()
         return is_new_object
-    
-    def _write_new_facts(self):
-        if self.name == "Line":
-            in_file = open(os.path.join(souffle_in_dir, "TypeOf" + ".facts"), "a")
-            csv_writer = csv.writer(in_file, delimiter="\t")
-            for fact in self.facts:
-                if fact.is_new:
-                    # Notice - this fact will be marked with 'not-new' later
-                    # fact.is_new = False
-                    csv_writer.writerow(["line", fact.id])
-            in_file.close()
-            in_file = open(os.path.join(souffle_in_dir, "In" + ".facts"), "a")
-            csv_writer = csv.writer(in_file, delimiter="\t")
-            for fact in self.facts:
-                if fact.is_new:
-                    fact.is_new = False
-                    csv_writer.writerow([fact.params[0], fact.id])
-                    csv_writer.writerow([fact.params[1], fact.id])
-            in_file.close()
-            return
-        # Add the new facts to the relation input file
-        in_file = open(os.path.join(souffle_in_dir, self.name + ".facts"), "a")
+
+    def _write_facts_helper(self, out_rel_name, generate_row_to_write, should_mark_is_new=True):
+        in_file = open(os.path.join(souffle_in_dir, out_rel_name + ".facts"), "a")
         csv_writer = csv.writer(in_file, delimiter="\t")
         for fact in self.facts:
             if fact.is_new:
-                fact.is_new = False
-                csv_writer.writerow(fact.params + [fact.id])
+                if should_mark_is_new:
+                    fact.is_new = False
+                csv_writer.writerow(generate_row_to_write(fact))
         in_file.close()
-        
+    
+    # This function adds the new facts to the relation input file
+    def _write_new_facts(self):
+        if self.name == "Line":
+            self._write_facts_helper(out_rel_name="TypeOf",
+                                generate_row_to_write=lambda fact:["line", fact.id],
+                                should_mark_is_new=False)
+            self._write_facts_helper(out_rel_name="In",
+                                generate_row_to_write=lambda fact:[fact.params[0], fact.id],
+                                should_mark_is_new=False)
+            self._write_facts_helper(out_rel_name="In",
+                                generate_row_to_write=lambda fact:[fact.params[1], fact.id])
+        else:
+            self._write_facts_helper(out_rel_name=self.name,
+                                generate_row_to_write=lambda fact:fact.params + [fact.id])
+    
     def make(self):
         # Write new facts to relevant input files for deduction
         # The function read outpus of last souffle run, look for new facts from 'make' relations, and create appropriate facts. Return True if a new fact was added
@@ -124,7 +121,8 @@ locations = {
                 "Circle": LocationType("Circle", is_make_relation=True),
                 "Intersection": LocationType("Intersection", is_make_relation=True, should_delete_symmetry=True),
                 "Line": LocationType("Line", is_make_relation=True),
-                "Raythru": LocationType("Raythru", is_make_relation=True)
+                "Raythru": LocationType("Raythru", is_make_relation=True),
+                "Minus": LocationType("Minus", is_make_relation=True)
                 #"Ray": LocationType("Ray", is_make_relation=True)
             }
 # These are relations that has "make" relations (to help create their data)
@@ -216,15 +214,16 @@ def move_input_to_folder():
         if file_name.endswith(".facts"):
             shutil.copyfile(os.path.join(in_dir, file_name), os.path.join(souffle_in_dir, file_name))
 
+# The function gets all output vars, finds best locus for each one and return a dict that saves it
+# Dict structure: locus_per_var = {var:(best_locus, best_dim)}
 def best_locus_for_each_var(output_vars):
-    # Get all output vars, find best locus for each one and return a dict that saves it
     locus_per_var = {}
     for var in output_vars:
         loci = find_all_locations(var)
         res = get_best_locus(loci)
         if res:
             best_locus, best_dim = res
-            print(var + " is inside this locus: " + best_locus)
+            print(var + " is inside this locus: " + best_locus + ", from dim: " + str(best_dim))
             locus_per_var[var] = (best_locus, best_dim)
         else:
             print("Couldn't find a locus for " + var)
@@ -237,7 +236,7 @@ def get_best_output_var(output_vars, locus_per_var):
     overall_best_locus = None
     for var in locus_per_var.keys():
         cur_locus, cur_dim = locus_per_var[var]
-        if not overall_best_dim or (cur_dim < overall_best_dim):
+        if (overall_best_dim == None) or (cur_dim < overall_best_dim):
             overall_best_dim = cur_dim
             overall_best_var = var
             overall_best_locus = cur_locus
@@ -282,7 +281,7 @@ def get_locus_as_string(locus_name):
             #TODO2: should this be a function inside Locus object?
             
             # locus has 2 parameters
-            if (locus_type.name == "Circle") or (locus_type.name == "Line"):
+            if (locus_type.name == "Circle") or (locus_type.name == "Line") or (locus_type.name == "Raythru"):
                 return "{locus}({param0},{param1})".format(locus=locus_type.name,param0=fact.params[0], param1=fact.params[1])
             if locus_type.name == "Intersection":
                 locus1_name = fact.params[0]
@@ -301,7 +300,7 @@ class PartialProg:
     def add_known(self, symbols):
         self.known = symbols
     def to_str(self):
-        return "known = {}\n rules = {}".format(str(self.known), str(self.rules))
+        return "known = {}\nrules = {}".format(str(self.known), str(self.rules))
     
 def get_geometric_locus(locus_id, symbols):
     # Get a locus id and dict of symbols with their real values.
@@ -356,7 +355,11 @@ def deductive_synthesis(exercise, partial_prog):
         emit_known_fact(output_vars=output_vars,
                         var=var)
         if is_search_completed(output_vars, locus_per_var):
+            # Question: Should I always emit known facts for all vars with dimension 0?
             # In this case all output vars has 0 dimension
+            for var in output_vars:
+                locus, dim = locus_per_var[var]
+                partial_prog.add_in_rule(var, locus, dim)
             print("Search completed")
             is_done = True
 

@@ -1,5 +1,6 @@
 // Declarations
 .decl Vpar(ray:symbol, vec:symbol)
+.input Vpar
 
 .decl MakeCircle(center: symbol, radius: symbol)
 .output MakeCircle
@@ -13,15 +14,23 @@
 
 .decl Perp(l1:symbol, l2:symbol)
 
-.decl MakeRay(origin:symbol, direction:symbol)
-.output MakeRay
-.decl Ray(origin:symbol, direction:symbol, id:symbol)
-.input Ray
+//.decl MakeRay(origin:symbol, direction:symbol)
+//.output MakeRay
+//.decl Ray(origin:symbol, direction:symbol, id:symbol)
+//.input Ray
 
 .decl MakeRaythru(a:symbol, b:symbol)
 .output MakeRaythru
 .decl Raythru(a:symbol, b:symbol, id:symbol)
 .input Raythru
+
+.decl Origin(ray:symbol, a:symbol)
+
+.decl MakeMinus(a:symbol, b:symbol)
+.output MakeMinus
+
+.decl Minus(a:symbol, b:symbol, id:symbol)
+.input Minus
 
 .decl AngleCcwVecs(u0:symbol,  u1:symbol, angle:symbol)
 
@@ -60,7 +69,7 @@
 MakeCircle(a, d):- Dist(a, _, d).
 
 // -- Angle --
-MakeRaythru(a,b):-AngleCcw(a, b, _, __).
+MakeRaythru(b,a):-AngleCcw(a, b, _, __).
 MakeRaythru(b,c):-AngleCcw(_, b, c, __).
 AngleCcwRays(ray0, ray1, angle):-AngleCcw(a, b, c, angle), Raythru(b,a,ray0), Raythru(b,c,ray1).
 Known(angle):-AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
@@ -71,20 +80,23 @@ Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf("line", l1), TypeOf("line", l2), In(a, l
 Known(l):-Known(l2),(Perp(l, l2);Perp(l2, l)).
 
 // -- Ray --
-//R("raythru(X,Y,ray)", 
-//  "typeof(ray,[:ray:]) & in(X,ray) & in(Y,ray) & origin(ray,X) "
-//  " & [ray<](ray,X,Y) & [!=](X,Y)"
-//  " & vpar(ray,u) & typeof(u, [:vec*R+:])", title="raythru-def"),
-//R("typeof(ray,[:ray:]) & in(X,ray) & in(Y,ray) & [ray<](ray,X,Y)",
-//  "vpar(ray, Y-X)", title="ray-2in"),
 // raythru definition
-//MakeVec(),MakeRay(ray):-Raythru(a, b, ray)
-//Origin(ray0, a),In(a, ray0), In(b, ray0):-Raythru(a, b, raythu), Ray(raythu, ray0).
-Known(ray):-Raythru(a, b, ray), Known(a), Known(b).
+TypeOf("ray", ray), MakeMinus(a, b):-Raythru(a, b, ray).
+Vpar(ray, vec):-Minus(a, b, vec), Raythru(a, b, ray).
+Origin(ray, a),In(a, ray), In(b, ray):-Raythru(a, b, ray).
 
-// ray rotate (ccw)
-AngleCcwVecs(u0, u1, angle):-Ray(_, __, ray0), Ray(___, ____, ray1), AngleCcwRays(ray0, ray1, angle), Vpar(ray0, u0), Vpar(ray1, u1).
+Known(ray):-TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
+
+//ray-rotate(ccw)
+AngleCcwVecs(u0, u1, angle):-TypeOf("ray", ray0), TypeOf("ray", ray1), AngleCcwRays(ray0, ray1, angle), Vpar(ray0, u0), Vpar(ray1, u1).
+
+
+//R("angle_ccw_vecs(u,v,a) & typeof(v,[:vec*R+:]) & known(u) & known(a)",
+//  "known(v)", title="rotate(ccw)-1"),
+//rotate(ccw)-1
 Known(v):-AngleCcwVecs(u, v, angle), Vpar(_, v), Known(u), Known(angle). //TODO: consider using typeof instead of vpar (since vector isn't necessary vpar)
+//R("angle_ccw_vecs(u,v,a) & typeof(u,[:vec*R+:]) & known(v) & known(a)",
+//  "known(u)", title="rotate(ccw)-0"),
 Known(u):-AngleCcwVecs(u, v, angle), Vpar(_, u), Known(v), Known(angle). //TODO: same here
 
 // -- Arithmetics rules --
@@ -106,11 +118,12 @@ In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
 Known(c):- Circle(a, d, c), Known(a), Known(d).
 Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
 Known(dist):-Known(a), Known(b), Dist(a, b, dist).
+Known(vec):-Minus(a, b, vec), Known(a), Known(b).
 
 
 Dimension(i, 1):-TypeOf("line", i).
 Dimension(i, 1):-Circle(_, __, i).
-Dimension(i, 1):-Raythru(_, __, i).
+Dimension(i, 1):-TypeOf("ray", i).
 Dimension(i, 0):-Intersection(a, b, i), Dimension(a, 1), Dimension(b, 1), a!= b.
 
 KnownDimension(id, dim):-Dimension(id, dim), Known(id).
