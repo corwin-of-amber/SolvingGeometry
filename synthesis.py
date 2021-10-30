@@ -24,14 +24,14 @@ SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0
         "square": Sample("square", output_vars=["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
         "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols={"A":(0, 0),  "C": (1, 0), "a":108,  "d": 1})}
 
-EXERCISE_NAME = "square"
+EXERCISE_NAME = "pentagon"
 souffle_main_dir = "souffleFiles"
 souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
 souffle_out_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 
 
-class LocationType:
+class Relation:
     def __init__(self, name, is_make_relation=False, should_delete_symmetry=False):
         self.name = name
         self.facts = []
@@ -117,20 +117,20 @@ class Fact:
     def __eq__(self, other):
         return (self.params == other.params) and (self.relation.name == self.relation.name)
 
-locations = {
-                "Circle": LocationType("Circle", is_make_relation=True),
-                "Intersection": LocationType("Intersection", is_make_relation=True, should_delete_symmetry=True),
-                "Line": LocationType("Line", is_make_relation=True),
-                "Raythru": LocationType("Raythru", is_make_relation=True),
-                "Minus": LocationType("Minus", is_make_relation=True)
-                #"Ray": LocationType("Ray", is_make_relation=True)
+relations = {
+                "Circle": Relation("Circle", is_make_relation=True),
+                "Intersection": Relation("Intersection", is_make_relation=True, should_delete_symmetry=True),
+                "Line": Relation("Line", is_make_relation=True),
+                "Raythru": Relation("Raythru", is_make_relation=True),
+                "Minus": Relation("Minus", is_make_relation=True)
             }
 # These are relations that has "make" relations (to help create their data)
-make_relations = [rel for rel in locations.values() if rel.is_make_relation]
+make_relations = [rel for rel in relations.values() if rel.is_make_relation]
 
 def run_souffle():
     os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
+# Functions to parse the results of the deduction
 def find_all_locations(obj_id):
     # Get an object id, parse datalog output and return list of locations it's in
     loci = []
@@ -170,49 +170,6 @@ def get_best_known_locus(loci):
         return locus_from_dim0, best_dim
     if locus_from_dim1:
         return locus_from_dim1, best_dim
-
-
-def create_folder():
-    #TODO: create empty facts files
-    if (not os.path.isdir(souffle_main_dir)):
-        os.mkdir(souffle_main_dir)
-    if (os.path.isdir(souffle_out_dir)):
-        shutil.rmtree(souffle_out_dir)
-    os.mkdir(souffle_out_dir)
-
-def deductive_synthesis_iteration():
-    # Run souffle iteratively, until there aren't new facts in the make relations
-    is_new_object = True
-    while is_new_object:
-        is_new_object = False
-        print("Running souffle...")
-        run_souffle()
-        for rel in make_relations:
-            if rel.make():
-                is_new_object = True
-
-def parse_spec():
-    # Open spec file and parse it. Return  output variable if exist
-    # TODO: Create appropriate facts file\ dl file from the input
-    with open("example.spec", "r") as f:
-        for line in f.readlines():
-            line = line.strip("\n")
-            if line.startswith("dist"):
-                x,y,dist = re.compile("dist\((\w+),(\w+)\)=(\d*)").findall(line)[0]
-            if line.startswith("known"):
-                pass
-            if line.startswith("?"):
-                # This is output variable
-                output_var = re.compile("\?\((\w+)\)").findall(line)
-    return output_var
-
-def move_input_to_folder():
-    # This function copies the files in the input dir, to the dir which souffle reads from
-    # Later we will get the input from spec and won't need this
-    in_dir = os.path.join("tmpInput", EXERCISE_NAME)
-    for file_name in os.listdir(in_dir):
-        if file_name.endswith(".facts"):
-            shutil.copyfile(os.path.join(in_dir, file_name), os.path.join(souffle_in_dir, file_name))
 
 # The function gets all output vars, finds best locus for each one and return a dict that saves it
 # Dict structure: locus_per_var = {var:(best_locus, best_dim)}
@@ -307,7 +264,7 @@ class PartialProg:
         self.known = {}
         self.rules = []
     def _help_produce_rule(self, locus_name):
-        # TODO: Handle non-uniform parenthesis
+        # TODO: Handle non-uniform quotation-mark
         # Question: how do I know what the leaves are?
         # Problem: Apply for already known facts
         predicate_name, params = get_predicate(locus_name)
@@ -375,6 +332,17 @@ def emit_known_fact(output_vars, var):
     output_vars.remove(var)
     #symbols[var] = geometric_locus[0] # This line is  temporary
 
+def deductive_synthesis_iteration():
+    # Run souffle iteratively, until there aren't new facts in the make relations
+    is_new_object = True
+    while is_new_object:
+        is_new_object = False
+        print("Running souffle...")
+        run_souffle()
+        for rel in make_relations:
+            if rel.make():
+                is_new_object = True
+
 # The function create the partial program for the numeric search algorithm
 def deductive_synthesis(exercise, partial_prog):
     output_vars = exercise.output_vars.copy()
@@ -397,6 +365,40 @@ def deductive_synthesis(exercise, partial_prog):
                 partial_prog.produce_in_rule(var, locus, dim)
             print("Search completed")
             is_done = True
+
+# Functions to prepare for the deduction part
+
+def parse_spec():
+    # Open spec file and parse it. Return  output variable if exist
+    # TODO: Create appropriate facts file\ dl file from the input
+    with open("example.spec", "r") as f:
+        for line in f.readlines():
+            line = line.strip("\n")
+            if line.startswith("dist"):
+                x,y,dist = re.compile("dist\((\w+),(\w+)\)=(\d*)").findall(line)[0]
+            if line.startswith("known"):
+                pass
+            if line.startswith("?"):
+                # This is output variable
+                output_var = re.compile("\?\((\w+)\)").findall(line)
+    return output_var
+
+def create_folder():
+    #TODO: create empty facts files
+    if (not os.path.isdir(souffle_main_dir)):
+        os.mkdir(souffle_main_dir)
+    if (os.path.isdir(souffle_out_dir)):
+        shutil.rmtree(souffle_out_dir)
+    os.mkdir(souffle_out_dir)
+
+def move_input_to_folder():
+    # This function copies the files in the input dir, to the dir which souffle reads from
+    # Later we will get the input from spec and won't need this
+    in_dir = os.path.join("tmpInput", EXERCISE_NAME)
+    for file_name in os.listdir(in_dir):
+        if file_name.endswith(".facts"):
+            shutil.copyfile(os.path.join(in_dir, file_name), os.path.join(souffle_in_dir, file_name))
+
 
 def main():
     create_folder()
