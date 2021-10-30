@@ -55,6 +55,12 @@
 .input Known
 .output Known
 
+// ApplyN is apply with N parameters
+.decl  Apply2(id:symbol, str:symbol, a:symbol, b:symbol)
+.output Apply2
+.decl  Apply3(id:symbol, str:symbol, a:symbol, b:symbol, c:symbol)
+.output Apply3
+
 .decl Dimension(id: symbol, dim: number)
 .output Dimension
 
@@ -72,11 +78,12 @@ MakeCircle(a, d):- Dist(a, _, d).
 MakeRaythru(b,a):-AngleCcw(a, b, _, __).
 MakeRaythru(b,c):-AngleCcw(_, b, c, __).
 AngleCcwRays(ray0, ray1, angle):-AngleCcw(a, b, c, angle), Raythru(b,a,ray0), Raythru(b,c,ray1).
-Known(angle):-AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
+Apply3(angle, "AngleCcw", a, b, c), Known(angle):-AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
         
 Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf("line", l1), TypeOf("line", l2), In(a, l1), In(c, l2), In(b, l1), In(b, l2).
 // Is this a good rule? maybe change to this:
 // R("perp(u,v) & typeof(v,[:vec*R:]) & Known(u)", "Known(v)", title="orth")
+//TODO: Change this rule (it isn't in shachar rules)
 Known(l):-Known(l2),(Perp(l, l2);Perp(l2, l)).
 
 // -- Ray --
@@ -85,7 +92,7 @@ TypeOf("ray", ray), MakeMinus(a, b):-Raythru(a, b, ray).
 Vpar(ray, vec):-Minus(a, b, vec), Raythru(a, b, ray).
 Origin(ray, a),In(a, ray), In(b, ray):-Raythru(a, b, ray).
 
-Known(ray):-TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
+Apply2(ray, "Rayvec", a, u), Known(ray):-TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
 
 //ray-rotate(ccw)
 AngleCcwVecs(u0, u1, angle):-TypeOf("ray", ray0), TypeOf("ray", ray1), AngleCcwRays(ray0, ray1, angle), Vpar(ray0, u0), Vpar(ray1, u1).
@@ -94,10 +101,10 @@ AngleCcwVecs(u0, u1, angle):-TypeOf("ray", ray0), TypeOf("ray", ray1), AngleCcwR
 //R("angle_ccw_vecs(u,v,a) & typeof(v,[:vec*R+:]) & known(u) & known(a)",
 //  "known(v)", title="rotate(ccw)-1"),
 //rotate(ccw)-1
-Known(v):-AngleCcwVecs(u, v, angle), Vpar(_, v), Known(u), Known(angle). //TODO: consider using typeof instead of vpar (since vector isn't necessary vpar)
+Apply2(v, "Rotate(ccw)", u, angle), Known(v):-AngleCcwVecs(u, v, angle), Vpar(_, v), Known(u), Known(angle). //TODO: consider using typeof instead of vpar (since vector isn't necessary vpar)
 //R("angle_ccw_vecs(u,v,a) & typeof(u,[:vec*R+:]) & known(v) & known(a)",
 //  "known(u)", title="rotate(ccw)-0"),
-Known(u):-AngleCcwVecs(u, v, angle), Vpar(_, u), Known(v), Known(angle). //TODO: same here
+Apply2(u, "Rotate(cw)", v, angle), Known(u):-AngleCcwVecs(u, v, angle), Vpar(_, u), Known(v), Known(angle). //TODO: same here
 
 // -- Arithmetics rules --
 Dist(a, b, d):- Dist(b, a, d).
@@ -115,10 +122,11 @@ In(b, c):- Dist(b, a, d), Circle(a, d, c).
 In(b, i):-In(b, c1), In(b, c2), Intersection(c1, c2, i).
   
 
-Known(c):- Circle(a, d, c), Known(a), Known(d).
-Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
-Known(dist):-Known(a), Known(b), Dist(a, b, dist).
-Known(vec):-Minus(a, b, vec), Known(a), Known(b).
+Apply2(c, "Circle", a, d), Known(c):- Circle(a, d, c), Known(a), Known(d).
+Apply2(c, "Circle", a, d), Known(c):- Circle(a, d, c), Known(a), Known(d).
+Apply2(i, "Intersection", c1, c2), Known(i):- Known(c1), Known(c2), Intersection(c1, c2, i).
+Apply2(dist, "Dist", a, b), Known(dist):-Known(a), Known(b), Dist(a, b, dist).
+Apply2(vec, "Vec", a, b), Known(vec):-Minus(a, b, vec), Known(a), Known(b).
 
 
 Dimension(i, 1):-TypeOf("line", i).

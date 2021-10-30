@@ -22,9 +22,9 @@ class Sample:
 SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
         "myTriangle": Sample("myTriangle", output_vars=["W", "Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
         "square": Sample("square", output_vars=["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
-        "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols=None)}
+        "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols={"A":(0, 0),  "C": (1, 0), "a":108,  "d": 1})}
 
-EXERCISE_NAME = "pentagon"
+EXERCISE_NAME = "square"
 souffle_main_dir = "souffleFiles"
 souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
@@ -143,7 +143,7 @@ def find_all_locations(obj_id):
     f.close()
     return loci
 
-def get_best_locus(loci):
+def get_best_known_locus(loci):
     # Get list of possible locations, return  a known one with minimal dimension
     # If the object isn't in any known locus - return  None
 
@@ -216,11 +216,11 @@ def move_input_to_folder():
 
 # The function gets all output vars, finds best locus for each one and return a dict that saves it
 # Dict structure: locus_per_var = {var:(best_locus, best_dim)}
-def best_locus_for_each_var(output_vars):
+def best_known_locus_for_each_var(output_vars):
     locus_per_var = {}
     for var in output_vars:
         loci = find_all_locations(var)
-        res = get_best_locus(loci)
+        res = get_best_known_locus(loci)
         if res:
             best_locus, best_dim = res
             print(var + " is inside this locus: " + best_locus + ", from dim: " + str(best_dim))
@@ -272,35 +272,70 @@ def get_locus_type_from_name(locus_name):
     return locations[locus_type]
     return locus_type
 
-def get_locus_as_string(locus_name):
-    locus_type = get_locus_type_from_name(locus_name)
-    # All the relavent locations are already in the facts list in memory        
-    for fact in locus_type.facts:
-        if fact.id == locus_name:
-            # TODO: Should I check somewhere if the locus is  known?
-            #TODO2: should this be a function inside Locus object?
-            
-            # locus has 2 parameters
-            if (locus_type.name == "Circle") or (locus_type.name == "Line") or (locus_type.name == "Raythru"):
-                return "{locus}({param0},{param1})".format(locus=locus_type.name,param0=fact.params[0], param1=fact.params[1])
-            if locus_type.name == "Intersection":
-                locus1_name = fact.params[0]
-                locus2_name = fact.params[1]
-                return get_locus_as_string(locus1_name) + ", " + get_locus_as_string(locus2_name)
-    raise AssertionError 
+# The function gets a locus name, and find the predicate that made the locus known (usiing the apply relation).
+# The function returns the predicate and its params
+def get_predicate(locus_name):
+    # TODO: Save this for each iteration instead of calculating  from scratch
+    # Find locus name inside the apply relation files, and return the relevant predicate
+    for i in range(2, 4):
+        f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
+        csv_reader = csv.reader(f, delimiter="\t")
+        for row in csv_reader:
+            if (row[0] == locus_name):
+                f.close()
+                return row[1], row[2:]
+                
+        f.close()
+    # If couldn't find a predicate - than this is a leaves
+    raise AssertionError("Couldnt find apply rule for: " + str(locus_name))
+    
 
+def is_leave(term):
+    for i in range(2, 4):
+        f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
+        csv_reader = csv.reader(f, delimiter="\t")
+        for row in csv_reader:
+            if (row[0] == term):
+                f.close()
+                return False
+                
+        f.close()
+    return True
 
 class PartialProg:
     def __init__(self):
         self.known = {}
         self.rules = []
-    def add_in_rule(self, var, locus_name, dim):
-        locus_string = get_locus_as_string(locus_name)
-        self.rules.append([":in", var, [locus_string]])
-    def add_known(self, symbols):
+    def _help_produce_rule(self, locus_name):
+        # TODO: Handle non-uniform parenthesis
+        # Question: how do I know what the leaves are?
+        # Problem: Apply for already known facts
+        predicate_name, params = get_predicate(locus_name)
+        param_strings = []
+        for param in params:
+            if not is_leave(param):
+                param_strings.append(self._help_produce_rule(param))
+            else:
+                param_strings.append(param)
+        if predicate_name == "Intersection":
+            return [self._help_produce_rule(params[0]), self._help_produce_rule(params[1])]
+        return '{}{}'.format(predicate_name, tuple(param_strings))
+        
+    def produce_in_rule(self, var, locus_name, dim):
+        locus_list = self._help_produce_rule(locus_name)
+        if type(locus_list) != list:
+            locus_list = [locus_list]
+        self.rules.append([":in", var, locus_list])
+    def produce_known(self, symbols):
         self.known = symbols
     def to_str(self):
-        return "known = {}\nrules = {}".format(str(self.known), str(self.rules))
+        #return "known = {}\nrules = {}".format(str(self.known), str(self.rules))
+        out_str = "known = {}\n".format(str(self.known))
+        out_str += "[\n"
+        for rule in  self.rules:
+            out_str += "\t{}\n".format(rule)
+        out_str += "]"
+        return out_str
     
 def get_geometric_locus(locus_id, symbols):
     # Get a locus id and dict of symbols with their real values.
@@ -346,12 +381,12 @@ def deductive_synthesis(exercise, partial_prog):
     is_done = False
     while not is_done:
         deductive_synthesis_iteration()
-        locus_per_var = best_locus_for_each_var(output_vars)
+        locus_per_var = best_known_locus_for_each_var(output_vars)
         var, locus, dim = get_best_output_var(output_vars, locus_per_var)
         if not var:
             # In this case there is no way to progress
             raise AssertionError("Not found output var with known location")
-        partial_prog.add_in_rule(var, locus, dim)
+        partial_prog.produce_in_rule(var, locus, dim)
         emit_known_fact(output_vars=output_vars,
                         var=var)
         if is_search_completed(output_vars, locus_per_var):
@@ -359,7 +394,7 @@ def deductive_synthesis(exercise, partial_prog):
             # In this case all output vars has 0 dimension
             for var in output_vars:
                 locus, dim = locus_per_var[var]
-                partial_prog.add_in_rule(var, locus, dim)
+                partial_prog.produce_in_rule(var, locus, dim)
             print("Search completed")
             is_done = True
 
@@ -370,7 +405,7 @@ def main():
     #move_input_to_folder()
     partial_prog = PartialProg()
     # Note: symbols is a dict we should get from the front
-    partial_prog.add_known(exercise.symbols)
+    partial_prog.produce_known(exercise.symbols)
     deductive_synthesis(exercise, partial_prog)
     print("Partial program is: ")
     print(partial_prog.to_str())
