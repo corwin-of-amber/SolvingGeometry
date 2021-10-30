@@ -264,7 +264,6 @@ class PartialProg:
         self.known = {}
         self.rules = []
     def _help_produce_rule(self, locus_name):
-        # TODO: Handle non-uniform quotation-mark
         # Question: how do I know what the leaves are?
         # Problem: Apply for already known facts
         predicate_name, params = get_predicate(locus_name)
@@ -276,7 +275,11 @@ class PartialProg:
                 param_strings.append(param)
         if predicate_name == "Intersection":
             return [self._help_produce_rule(params[0]), self._help_produce_rule(params[1])]
-        return '{}{}'.format(predicate_name, tuple(param_strings))
+        if len(param_strings) == 2:
+            return '{}({}, {})'.format(predicate_name, *param_strings)
+        if len(param_strings) == 3:
+            return '{}({}, {}, {})'.format(predicate_name, *param_strings)
+        raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
     def produce_in_rule(self, var, locus_name, dim):
         locus_list = self._help_produce_rule(locus_name)
