@@ -93,6 +93,10 @@ class Relation:
                                 should_mark_is_new=False)
             self._write_facts_helper(out_rel_name="In",
                                 generate_row_to_write=lambda fact:[fact.params[1], fact.id])
+        if self.name.startswith("Apply"):
+            # For apply relation - dont use id
+            self._write_facts_helper(out_rel_name=self.name,
+                                generate_row_to_write=lambda fact:fact.params)
         else:
             self._write_facts_helper(out_rel_name=self.name,
                                 generate_row_to_write=lambda fact:fact.params + [fact.id])
@@ -122,7 +126,12 @@ relations = {
                 "Intersection": Relation("Intersection", is_make_relation=True, should_delete_symmetry=True),
                 "Line": Relation("Line", is_make_relation=True),
                 "Raythru": Relation("Raythru", is_make_relation=True),
-                "Minus": Relation("Minus", is_make_relation=True)
+                "Minus": Relation("Minus", is_make_relation=True),
+                "Known": Relation("Known", is_make_relation=True),
+                # Apply relations are here to prevent from  applying rules that are already known
+                "Apply2": Relation("Apply2", is_make_relation=True),
+                "Apply3": Relation("Apply3", is_make_relation=True)
+                
             }
 # These are relations that has "make" relations (to help create their data)
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
@@ -235,7 +244,8 @@ def get_predicate(locus_name):
     # TODO: Save this for each iteration instead of calculating  from scratch
     # Find locus name inside the apply relation files, and return the relevant predicate
     for i in range(2, 4):
-        f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
+        #f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
+        f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".facts"), "r")
         csv_reader = csv.reader(f, delimiter="\t")
         for row in csv_reader:
             if (row[0] == locus_name):
@@ -248,8 +258,10 @@ def get_predicate(locus_name):
     
 
 def is_leave(term):
+    # TODO: Dont calculate this twice
     for i in range(2, 4):
-        f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
+        #f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
+        f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".facts"), "r")
         csv_reader = csv.reader(f, delimiter="\t")
         for row in csv_reader:
             if (row[0] == term):
