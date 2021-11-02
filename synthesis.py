@@ -19,7 +19,7 @@ class Sample:
         self.output_vars = output_vars
         self.symbols = symbols
 
-SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
+SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "d": 1}),
         "myTriangle": Sample("myTriangle", output_vars=["W", "Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
         "square": Sample("square", output_vars=["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
         "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols={"A":(0, 0),  "C": (1, 0), "a":108,  "d": 1})}
@@ -129,6 +129,7 @@ relations = {
                 "Minus": Relation("Minus", is_make_relation=True),
                 "Known": Relation("Known", is_make_relation=True),
                 # Apply relations are here to prevent from  applying rules that are already known
+                "Apply1": Relation("Apply1", is_make_relation=True),
                 "Apply2": Relation("Apply2", is_make_relation=True),
                 "Apply3": Relation("Apply3", is_make_relation=True)
                 
@@ -243,7 +244,7 @@ def get_locus_type_from_name(locus_name):
 def get_predicate(locus_name):
     # TODO: Save this for each iteration instead of calculating  from scratch
     # Find locus name inside the apply relation files, and return the relevant predicate
-    for i in range(2, 4):
+    for i in range(1, 4):
         #f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
         f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".facts"), "r")
         csv_reader = csv.reader(f, delimiter="\t")
@@ -276,7 +277,6 @@ class PartialProg:
         self.known = {}
         self.rules = []
     def _help_produce_rule(self, locus_name):
-        # Question: how do I know what the leaves are?
         # Problem: Apply for already known facts
         predicate_name, params = get_predicate(locus_name)
         param_strings = []
@@ -426,5 +426,8 @@ def main():
     deductive_synthesis(exercise, partial_prog)
     print("Partial program is: ")
     print(partial_prog.to_str())
+    f = open(os.path.join(souffle_out_dir, EXERCISE_NAME + ".out.txt"), "w")
+    f.write(partial_prog.to_str())
+    f.close()
         
 main()
