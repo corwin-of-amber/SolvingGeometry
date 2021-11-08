@@ -1,0 +1,14 @@
+#include <GeometryRules.dl>
+MakeLine("A", "B").
+MakeLine("B", "C").
+
+Dist("A", "B", "d").
+//Dist("A", "D", "d").
+Dist("B", "C", "d").
+Dist("C", "D", "d").
+
+Angle("A", "B", "C","90").
+
+Known("A").
+Known("B").
+Known("d").

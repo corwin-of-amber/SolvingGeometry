@@ -19,9 +19,11 @@ class Sample:
         self.output_vars = output_vars
         self.symbols = symbols
 
+#TODO: Change tuples to points
 SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "d": 1}),
         "myTriangle": Sample("myTriangle", output_vars=["W", "Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
         "square": Sample("square", output_vars=["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
+        "square2": Sample("square", output_vars=["C"], symbols={"A":(0,0), "B":(1, 0), "d": 1}),
         "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols={"A":(0, 0),  "C": (1, 0), "a":108,  "d": 1})}
 
 EXERCISE_NAME = "pentagon"
@@ -30,6 +32,9 @@ souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
 souffle_out_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
 
+
+MIN_APPLY = 1
+MAX_APPLY = 3
 
 class Relation:
     def __init__(self, name, is_make_relation=False, should_delete_symmetry=False):
@@ -244,7 +249,7 @@ def get_locus_type_from_name(locus_name):
 def get_predicate(locus_name):
     # TODO: Save this for each iteration instead of calculating  from scratch
     # Find locus name inside the apply relation files, and return the relevant predicate
-    for i in range(1, 4):
+    for i in range(MIN_APPLY, MAX_APPLY + 1):
         #f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
         f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".facts"), "r")
         csv_reader = csv.reader(f, delimiter="\t")
@@ -260,7 +265,7 @@ def get_predicate(locus_name):
 
 def is_leave(term):
     # TODO: Dont calculate this twice
-    for i in range(2, 4):
+    for i in range(MIN_APPLY, MAX_APPLY + 1):
         #f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".csv"), "r")
         f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".facts"), "r")
         csv_reader = csv.reader(f, delimiter="\t")
@@ -276,6 +281,7 @@ class PartialProg:
     def __init__(self):
         self.known = {}
         self.rules = []
+
     def _help_produce_rule(self, locus_name):
         # Problem: Apply for already known facts
         predicate_name, params = get_predicate(locus_name)
@@ -287,6 +293,8 @@ class PartialProg:
                 param_strings.append(param)
         if predicate_name == "Intersection":
             return [self._help_produce_rule(params[0]), self._help_produce_rule(params[1])]
+        if len(param_strings) == 1:
+            return '{}({})'.format(predicate_name, *param_strings)
         if len(param_strings) == 2:
             return '{}({}, {})'.format(predicate_name, *param_strings)
         if len(param_strings) == 3:

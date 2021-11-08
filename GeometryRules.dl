@@ -81,8 +81,13 @@ MakeKnown(angle):-AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
 MakeApply3(angle, "AngleCcw", a, b, c):-!Known(angle), AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
         
 Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf("line", l1), TypeOf("line", l2), In(a, l1), In(c, l2), In(b, l1), In(b, l2).
+
+MakeKnown(l):-TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
+MakeApply2(l, "Linevec", a, u):-!Known(l), TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
+
 // TODO: What if there aren't two points on the line?
-MakeMinus(a, b):-TypeOf("line", l), In(a, l), In(b, l).
+MakeMinus(a, b):-TypeOf("line", l), In(a, l), In(b, l), a!=b.
+Vpar(l, vec):-Minus(a, b, vec), TypeOf("line", l), In(a, l), In(b, l).
 
 Perp(u, v):-Perp(l0, l1), Vpar(l0, u), Vpar(l1, v), TypeOf("line", l0), TypeOf("line", l1).
 
@@ -95,7 +100,6 @@ MakeApply1(v, "Orth", u):-!Known(v), Perp(u, v), TypeOf("vec", v), Known(u).
 TypeOf("ray", ray), MakeMinus(a, b):-Raythru(a, b, ray).
 TypeOf("vec", vec):-Minus(_, __, vec).
 Vpar(ray, vec):-Minus(a, b, vec), Raythru(a, b, ray).
-Vpar(l, vec):-Minus(a, b, vec), TypeOf("line", l), In(a, l), In(b, l).
 Origin(ray, a),In(a, ray), In(b, ray):-Raythru(a, b, ray).
 
 MakeKnown(ray):-TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
