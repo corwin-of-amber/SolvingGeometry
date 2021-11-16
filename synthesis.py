@@ -291,7 +291,7 @@ class PartialProg:
                 param_strings.append(self._help_produce_rule(param))
             else:
                 param_strings.append(param)
-        if predicate_name == "Intersection":
+        if predicate_name == "intersection":
             return [self._help_produce_rule(params[0]), self._help_produce_rule(params[1])]
         if len(param_strings) == 1:
             return '{}({})'.format(predicate_name, *param_strings)
@@ -332,7 +332,7 @@ def get_geometric_locus(locus_id, symbols):
                 return Circle(Point(*symbols[point_name]), symbols[radius_name])
                 # Should somehow get real coordinates and distance
                 # Circle(point, radius)
-            if locus_type == "Intersection":
+            if locus_type == "intersection":
                 locus1_name = fact.params[0]
                 locus2_name = fact.params[1]
                 return intersection(get_geometric_locus(locus1_name, symbols), get_geometric_locus(locus2_name, symbols))
