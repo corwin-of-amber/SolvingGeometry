@@ -12,25 +12,19 @@ import csv
 # Notice: should download sympy
 #from sympy.geometry import Point, Circle, Line, intersection
 
-class Sample:
-    def __init__(self, name, output_vars, symbols):
+class Exercise:
+    def __init__(self, name, output_vars, known_symbols):
         # Note: symbols should come from the front
         self.name = name
         self.output_vars = output_vars
-        self.symbols = symbols
+        self.known_symbols = known_symbols
 
 #TODO: Change tuples to points
-SAMPLES = {"triangle": Sample("triangle", output_vars=["Y"], symbols={"X": (0, 0), "Z":(1, 0), "d": 1}),
-        "myTriangle": Sample("myTriangle", output_vars=["W", "Y"], symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
-        "square": Sample("square", output_vars=["C", "D"], symbols={"A":(0,0), "B":(1, 0)}),
-        "square2": Sample("square", output_vars=["C"], symbols={"A":(0,0), "B":(1, 0), "d": 1}),
-        "pentagon": Sample("pentagon", output_vars=["B", "D", "E"], symbols={"A":(0, 0),  "C": (1, 0), "a":108,  "d": 1})}
-
-EXERCISE_NAME = "pentagon"
-souffle_main_dir = "souffleFiles"
-souffle_in_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
-script = os.path.join("tmpInput", EXERCISE_NAME + ".dl")
-souffle_out_dir = os.path.join(souffle_main_dir, EXERCISE_NAME)
+SAMPLES = {"triangle": Exercise("triangle", output_vars=["Y"],          known_symbols={"X": (0, 0), "Z":(1, 0), "d": 1}),
+        "myTriangle": Exercise("myTriangle", output_vars=["W", "Y"], known_symbols={"X": (0, 0), "Z":(1, 0), "Dist": 1}),
+        "square": Exercise("square", output_vars=["C", "D"], known_symbols={"A":(0,0), "B":(1, 0)}),
+        "square2": Exercise("square", output_vars=["C"], known_symbols={"A":(0,0), "B":(1, 0), "d": 1}),
+        "pentagon": Exercise("pentagon", output_vars=["B", "D", "E"], known_symbols={"A":(0, 0),  "C": (1, 0), "a":108,  "d": 1})}
 
 
 MIN_APPLY = 1
@@ -143,7 +137,7 @@ relations = {
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
 
 def run_souffle():
-    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=script, souffle_out_dir=souffle_out_dir, include_dir="."))
+    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
 # Functions to parse the results of the deduction
 def find_all_locations(obj_id):
@@ -277,6 +271,26 @@ def is_leave(term):
         f.close()
     return True
 
+def produce_assert_helper(known_symbols, output_vars, statement):
+    # Notice this function can return None for certain predicates
+    predicate = statement.predicate.lower()
+    if predicate == "dist":
+        a = statement.vars[0]
+        b = statement.vars[1]
+        res = statement.vars[2]
+        assert(a in output_vars or a in known_symbols)
+        assert(b in output_vars or b in known_symbols)
+        assert(res in output_vars or res in known_symbols)
+        return ("dist({}, {}) - {}".format(a, b, res))
+    elif predicate == "known":
+        for var in statement.vars:
+            assert(var in known_symbols)
+        # In this case there isn't an assertion error
+        return
+    else:
+        raise NotImplementedError
+
+
 class PartialProg:
     def __init__(self):
         self.known = {}
@@ -308,6 +322,15 @@ class PartialProg:
         self.rules.append([":in", var, locus_list])
     def produce_known(self, symbols):
         self.known = symbols
+        
+    def produce_assert(self, *args, **kwargs):
+        # This function decides the format of the assertion rule
+        # The helper function calculates the expression to evaluate
+        res = produce_assert_helper(*args, **kwargs)
+        if res:
+            self.rules.append([":assert", res])
+
+
     def to_str(self):
         #return "known = {}\nrules = {}".format(str(self.known), str(self.rules))
         out_str = "known = {}\n".format(str(self.known))
@@ -316,6 +339,7 @@ class PartialProg:
             out_str += "\t{}\n".format(rule)
         out_str += "]"
         return out_str
+        
     
 def get_geometric_locus(locus_id, symbols):
     # Get a locus id and dict of symbols with their real values.
@@ -367,7 +391,7 @@ def deductive_synthesis_iteration():
                 is_new_object = True
 
 # The function create the partial program for the numeric search algorithm
-def deductive_synthesis(exercise, partial_prog):
+def deductive_synthesis(exercise, partial_prog, statements):
     output_vars = exercise.output_vars.copy()
     is_done = False
     while not is_done:
@@ -388,6 +412,14 @@ def deductive_synthesis(exercise, partial_prog):
                 partial_prog.produce_in_rule(var, locus, dim)
             print("Search completed")
             is_done = True
+    # TODO: Should organize the order of the rules!!
+    # If statements is None - there will be no assertion rules
+    if statements:
+        for s in statements:
+            partial_prog.produce_assert(
+                        known_symbols=exercise.known_symbols,
+                        output_vars=exercise.output_vars,
+                        statement=s)
 
 # Functions to prepare for the deduction part
 
@@ -415,6 +447,7 @@ def create_folder():
     os.mkdir(souffle_out_dir)
 
 def move_input_to_folder():
+    # deprecated
     # This function copies the files in the input dir, to the dir which souffle reads from
     # Later we will get the input from spec and won't need this
     in_dir = os.path.join("tmpInput", EXERCISE_NAME)
@@ -422,20 +455,37 @@ def move_input_to_folder():
         if file_name.endswith(".facts"):
             shutil.copyfile(os.path.join(in_dir, file_name), os.path.join(souffle_in_dir, file_name))
 
+def define_souffle_vars(exercise_name):
+    global souffle_main_dir
+    souffle_main_dir = "souffleFiles"
+    global souffle_in_dir
+    souffle_in_dir = os.path.join(souffle_main_dir, exercise_name)
+    global souffle_out_dir
+    souffle_out_dir = os.path.join(souffle_main_dir, exercise_name)
+    global souffle_script
+    souffle_script = os.path.join("tmpInput", exercise_name + ".dl")
 
-def main():
+def main(exercise, exercise_name, statements=None):
+    # TODO: Maybe statements should be part of exercise
+    define_souffle_vars(exercise_name)
     create_folder()
-    #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
-    exercise = SAMPLES[EXERCISE_NAME]
-    #move_input_to_folder()
+    
     partial_prog = PartialProg()
     # Note: symbols is a dict we should get from the front
-    partial_prog.produce_known(exercise.symbols)
-    deductive_synthesis(exercise, partial_prog)
+    partial_prog.produce_known(exercise.known_symbols)
+    deductive_synthesis(exercise, partial_prog, statements)
+    return partial_prog.to_str()
+    
+      
+if __name__ == "__main__":
+    # Basiccaly everything here shouldn't happen when running the whole program (the input should come from the front and the output should go to the numeric search
+    exercise_name = "pentagon"
+    exercise = SAMPLES[exercise_name]
+    
+    #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     print("Partial program is: ")
-    print(partial_prog.to_str())
-    f = open(os.path.join(souffle_out_dir, EXERCISE_NAME + ".out.txt"), "w")
-    f.write(partial_prog.to_str())
+    partial_prog = main(exercise, exercise_name=exercise_name) # Note this will produce no assertion rules
+    print(partial_prog)
+    f = open(os.path.join(souffle_out_dir, exercise_name + ".out.txt"), "w")
+    f.write(partial_prog)
     f.close()
-        
-main()
