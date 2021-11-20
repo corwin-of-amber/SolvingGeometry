@@ -1,9 +1,10 @@
 #TODO:
+# Handle asserts
+# Define an api for the synthesis module
 # - Take care of "error loading file" errors in souffle (for example create empty files)
 # - Take care of input - from spec to dl file/ facts files
 # - Handle exception in case souffle has error (catch it somehow and return niec output)
-# Questions:
-# Can two relations share the same fact?
+# Handle the fact that its running slowly
 
 import os
 import shutil
@@ -272,13 +273,15 @@ def is_leave(term):
     return True
 
 def produce_assert_helper(known_symbols, output_vars, statement):
+    # Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
     # Notice this function can return None for certain predicates
+    # TODO: Define an api for the synthesis module
     predicate = statement.predicate.lower()
     if predicate == "dist":
         a = statement.vars[0]
         b = statement.vars[1]
         res = statement.vars[2]
-        assert(a in output_vars or a in known_symbols)
+        assert(a in output_vars or a in known_symbols) # Is this necessary?
         assert(b in output_vars or b in known_symbols)
         assert(res in output_vars or res in known_symbols)
         return ("dist({}, {}) - {}".format(a, b, res))
@@ -287,6 +290,12 @@ def produce_assert_helper(known_symbols, output_vars, statement):
             assert(var in known_symbols)
         # In this case there isn't an assertion error
         return
+    elif predicate == "makeline":
+        return
+    elif predicate == "angle" or "angleccw":
+        # angle means we dont care of its ccw or cw 
+        # TODO: Make sure!!!
+        return ("angle_ccw({}, {}, {}) - {}".format(*statement.vars))
     else:
         raise NotImplementedError
 
@@ -323,12 +332,14 @@ class PartialProg:
     def produce_known(self, symbols):
         self.known = symbols
         
-    def produce_assert(self, *args, **kwargs):
+    def produce_assert(self, var, *args, **kwargs):
         # This function decides the format of the assertion rule
         # The helper function calculates the expression to evaluate
+        # var: name of the var we searched for in this assert
         res = produce_assert_helper(*args, **kwargs)
+        # Notice res might be none (which means we dont need an assertion rule for that statement)
         if res:
-            self.rules.append([":assert", res])
+            self.rules.append(["assert", var,  res])
 
 
     def to_str(self):
@@ -368,16 +379,15 @@ def get_geometric_locus(locus_id, symbols):
     raise AssertionError
     
 # The function  emits a known fact for the best var possible, in order to run the deductive part again
-def emit_known_fact(output_vars, var):
-    # geometric_locus = get_geometric_locus(locus, symbols)
-    # print("Geometric locus for var {0} is {1}".format(var, geometric_locus))
+def emit_known_fact(output_vars, known_symbols, var):
     print("Emit: {} to known  facts".format(var))
     f = open(os.path.join(souffle_in_dir, "Known.facts"), "a")
     csv_writer = csv.writer(f, delimiter="\t")
     csv_writer.writerow([var])
     f.close()
+    # TODO: Notice remove is slow in python (perhaps there is an alternative)
     output_vars.remove(var)
-    #symbols[var] = geometric_locus[0] # This line is  temporary
+    known_symbols.append(var)
 
 def deductive_synthesis_iteration():
     # Run souffle iteratively, until there aren't new facts in the make relations
@@ -391,9 +401,23 @@ def deductive_synthesis_iteration():
                 is_new_object = True
 
 # The function create the partial program for the numeric search algorithm
+# TODO: improve assertion rules - seperate them for each var and make sure we add them in the right time
 def deductive_synthesis(exercise, partial_prog, statements):
     output_vars = exercise.output_vars.copy()
+    # Create a copy of all known symbols names
+    known_symbols = list(exercise.known_symbols.keys())
     is_done = False
+    for s in statements:
+        if s.is_ready(known_symbols):
+            # TODO: Should I add assert rules here? Maybe remove this part
+            partial_prog.produce_assert(
+                    var=s.vars[0],
+                    known_symbols=exercise.known_symbols,
+                    output_vars=exercise.output_vars,
+                    statement=s)
+    # Cant use remove when iterating over a list, so create a new list instead
+    statements = [s for s in statements if not s.is_ready(known_symbols)]
+    
     while not is_done:
         deductive_synthesis_iteration()
         locus_per_var = best_known_locus_for_each_var(output_vars)
@@ -402,8 +426,20 @@ def deductive_synthesis(exercise, partial_prog, statements):
             # In this case there is no way to progress
             raise AssertionError("Not found output var with known location")
         partial_prog.produce_in_rule(var, locus, dim)
+        # Notice this function removes the var from output vars and add it to known symbols
         emit_known_fact(output_vars=output_vars,
+                        known_symbols=known_symbols,
                         var=var)
+        # A new var is known - add relevant assertion rules
+        for s in statements:
+            if s.is_ready(known_symbols):
+                partial_prog.produce_assert(
+                        var=var,
+                        known_symbols=exercise.known_symbols,
+                        output_vars=exercise.output_vars,
+                        statement=s)
+        statements = [s for s in statements if not s.is_ready(known_symbols)]
+
         if is_search_completed(output_vars, locus_per_var):
             # Question: Should I always emit known facts for all vars with dimension 0?
             # In this case all output vars has 0 dimension
@@ -412,15 +448,11 @@ def deductive_synthesis(exercise, partial_prog, statements):
                 partial_prog.produce_in_rule(var, locus, dim)
             print("Search completed")
             is_done = True
-    # TODO: Should organize the order of the rules!!
-    # If statements is None - there will be no assertion rules
-    if statements:
-        for s in statements:
-            partial_prog.produce_assert(
-                        known_symbols=exercise.known_symbols,
-                        output_vars=exercise.output_vars,
-                        statement=s)
 
+    print("Note: the remaining statements")
+    for s in statements:
+        print(s)
+    print()
 # Functions to prepare for the deduction part
 
 def parse_spec():
