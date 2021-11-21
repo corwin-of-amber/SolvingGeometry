@@ -349,6 +349,8 @@ class PartialProg:
                     assert_rules += " + " + res
                 else:
                     assert_rules = res
+        if assert_rules == "":
+            return
         self.rules.append(["assert", var,  assert_rules])
 
 
