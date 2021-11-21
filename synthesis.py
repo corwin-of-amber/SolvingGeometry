@@ -354,7 +354,7 @@ class PartialProg:
         self.rules.append(["assert", var,  assert_rules])
 
 
-    def to_str(self):
+    def __str__(self):
         #return "known = {}\nrules = {}".format(str(self.known), str(self.rules))
         out_str = "known = {}\n".format(str(self.known))
         out_str += "[\n"
@@ -441,10 +441,10 @@ def deductive_synthesis(exercise, partial_prog, statements):
                 cur_statements.append(s)
         
         partial_prog.produce_assert(
-                        statements=cur_statements,
-                        var=var,
-                        known_symbols=exercise.known_symbols,
-                        output_vars=exercise.output_vars)
+                    statements=cur_statements,
+                    var=var,
+                    known_symbols=exercise.known_symbols,
+                    output_vars=exercise.output_vars)
         statements = [s for s in statements if not s.is_ready(known_symbols)]
 
         if is_search_completed(output_vars, locus_per_var):
@@ -504,7 +504,7 @@ def define_souffle_vars(exercise_name):
     global souffle_script
     souffle_script = os.path.join("tmpInput", exercise_name + ".dl")
 
-def main(exercise, exercise_name, statements=None):
+def main(exercise, exercise_name, statements=None, write_output_to_file=False):
     # TODO: Maybe statements should be part of exercise
     define_souffle_vars(exercise_name)
     create_folder()
@@ -513,7 +513,12 @@ def main(exercise, exercise_name, statements=None):
     # Note: symbols is a dict we should get from the front
     partial_prog.produce_known(exercise.known_symbols)
     deductive_synthesis(exercise, partial_prog, statements)
-    return partial_prog.to_str()
+    
+    if write_output_to_file:
+        f = open(os.path.join(souffle_out_dir, exercise_name + ".out.txt"), "w")
+        f.write(str(partial_prog))
+        f.close()        
+    return partial_prog
     
       
 if __name__ == "__main__":
@@ -523,8 +528,5 @@ if __name__ == "__main__":
     
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     print("Partial program is: ")
-    partial_prog = main(exercise, exercise_name=exercise_name) # Note this will produce no assertion rules
+    partial_prog = main(exercise, exercise_name=exercise_name, write_output_to_file=True) # Note this will produce no assertion rules
     print(partial_prog)
-    f = open(os.path.join(souffle_out_dir, exercise_name + ".out.txt"), "w")
-    f.write(partial_prog)
-    f.close()
