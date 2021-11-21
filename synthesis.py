@@ -1,4 +1,5 @@
 #TODO:
+# TODO:  change orth to rotate in 90 degrees
 # Handle asserts
 # Define an api for the synthesis module
 # - Take care of "error loading file" errors in souffle (for example create empty files)
@@ -272,7 +273,7 @@ def is_leave(term):
         f.close()
     return True
 
-def produce_assert_helper(known_symbols, output_vars, statement):
+def produce_assert_helper(statement, known_symbols, output_vars):
     # Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
     # Notice this function can return None for certain predicates
     # TODO: Define an api for the synthesis module
@@ -332,14 +333,23 @@ class PartialProg:
     def produce_known(self, symbols):
         self.known = symbols
         
-    def produce_assert(self, var, *args, **kwargs):
+    def produce_assert(self, var, statements, *args, **kwargs):
         # This function decides the format of the assertion rule
         # The helper function calculates the expression to evaluate
+        # statements: list of ready statements
         # var: name of the var we searched for in this assert
-        res = produce_assert_helper(*args, **kwargs)
-        # Notice res might be none (which means we dont need an assertion rule for that statement)
-        if res:
-            self.rules.append(["assert", var,  res])
+        assert_rules = ""
+        for s in statements:
+            res = produce_assert_helper(s, *args, **kwargs)
+            # Notice res might be none (which means we dont need an assertion rule for that statement)
+            if res:
+                res = "abs({})".format(res)
+                if assert_rules != "":
+                    # This  isn't the first assert
+                    assert_rules += " + " + res
+                else:
+                    assert_rules = res
+        self.rules.append(["assert", var,  assert_rules])
 
 
     def to_str(self):
@@ -407,15 +417,7 @@ def deductive_synthesis(exercise, partial_prog, statements):
     # Create a copy of all known symbols names
     known_symbols = list(exercise.known_symbols.keys())
     is_done = False
-    for s in statements:
-        if s.is_ready(known_symbols):
-            # TODO: Should I add assert rules here? Maybe remove this part
-            partial_prog.produce_assert(
-                    var=s.vars[0],
-                    known_symbols=exercise.known_symbols,
-                    output_vars=exercise.output_vars,
-                    statement=s)
-    # Cant use remove when iterating over a list, so create a new list instead
+    # Remove assertions on already known  symbols
     statements = [s for s in statements if not s.is_ready(known_symbols)]
     
     while not is_done:
@@ -431,13 +433,16 @@ def deductive_synthesis(exercise, partial_prog, statements):
                         known_symbols=known_symbols,
                         var=var)
         # A new var is known - add relevant assertion rules
+        cur_statements = []
         for s in statements:
             if s.is_ready(known_symbols):
-                partial_prog.produce_assert(
+                cur_statements.append(s)
+        
+        partial_prog.produce_assert(
+                        statements=cur_statements,
                         var=var,
                         known_symbols=exercise.known_symbols,
-                        output_vars=exercise.output_vars,
-                        statement=s)
+                        output_vars=exercise.output_vars)
         statements = [s for s in statements if not s.is_ready(known_symbols)]
 
         if is_search_completed(output_vars, locus_per_var):
