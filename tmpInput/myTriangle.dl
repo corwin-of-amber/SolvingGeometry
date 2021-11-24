@@ -1,0 +1,10 @@
+#include <GeometryRules.dl>
+Dist("X", "Y", "Dist").
+Dist("Z", "Y", "Dist").
+Dist("W", "Y", "Dist").
+Dist("Z", "W", "Dist").
+
+Known("X").
+Known("Z").
+Known("Dist").
+//TODO: add w  != x

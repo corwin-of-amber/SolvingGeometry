@@ -1,0 +1,20 @@
+#include <GeometryRules.dl>
+Dist("A","B","d").
+Dist("B","C","d").
+Dist("C","D","d").
+Dist("D","E","d").
+Dist("E","A","d").
+AngleCcw("A","B","C","a").
+AngleCcw("B","C","D","a").
+AngleCcw("C","D","E","a").
+AngleCcw("D","E","A","a").
+AngleCcw("E","A","B","a").
+//TODO: do something about intersect_2segments_q, realnot (maybe its only for the numeric part?)
+//intersect_2segments_q("A","B","C","D","q").
+//realnot("q").
+//[!=](D,A) & [!=](A,C)",
+Known("A").
+Known("C").
+Known("a").
+Known("d").
+//[?](B,D,E)
