@@ -9,10 +9,10 @@ MakeLine("B", "C").
 //In("C", "line2").
 //In("B", "line2").
 
-Dist("A", "B", "dist").
-Dist("A", "D", "dist").
-Dist("B", "C", "dist").
-Dist("C", "D", "dist").
+Dist("A", "B", "Dist").
+Dist("A", "D", "Dist").
+Dist("B", "C", "Dist").
+Dist("C", "D", "Dist").
 
 Angle("A", "D", "C","90").
 
