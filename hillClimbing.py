@@ -32,9 +32,6 @@ def myInput():
 #     result += abs(Z.distance(Y)-6)
 #     return result
 
-"Ray(a,Line(b,a).angle_between(Line(a,Point(a.x+1,a.y)))" "Line(a,b).rotate(-pi/2)"
-"Ray(a,angle=Line(a,b).angle_between(Line(a,Point(a.x+1,a.y)))).rotate(-(2*pi)/3)"
-
 def perpBisect(a,b,x1,y1):
     s = Segment(a,b)
     if s.slope == 0:
@@ -159,7 +156,21 @@ def solve(domain, objfunc):
     solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Nelder-Mead")
     return domain(*solution.x)
 
+def solveWithoutHillClimbing(rule, domain, known):
+    min_value = float("inf")
+    min_point = None
+    print(known)
+    for point in domain:
+        known[rule[1]] = point
+        temp_value = eval(f'abs({rule[2]})', {**PRIMITIVES, **known})
+        if temp_value < min_value:
+            min_point = point
+            min_value = temp_value
+    return min_point
+
 PRIMITIVES = {
+    "sqrt": sqrt,
+    "Point": Point,
     "circle": Circle,
     "rayvec": Ray,
     "linevec": Line,
@@ -169,57 +180,62 @@ PRIMITIVES = {
     "rotateCw": rotateCw,
     "rotateCcw": rotateCcw,
     "vecFrom2Points": vecFrom2Points,
-    "angleCcw": angleCcw
+    "angleCcw": angleCcw,
+    "intersection": intersection
 }
 
-# --- now a concrete program
 
-def hillClibing(known, rules):
+def hillClimbing(known, rules):
+
+    #
+    # domain_c = get_domain(eval(stmts[0][2], {**PRIMITIVES, **known}))
+    # objfunc_c = eval(f'lambda {stmts[0][1]}: {stmts[1][1]}', {**PRIMITIVES, **known})
+    # known['c'] = solve(domain_c, objfunc_c)
+    # print(known)
+    # return
+
     domains = {}
     for rule in rules:
+        print(rule)
         if rule[0] == ":in":
             if len(rule[2]) == 1:
-                domains[rule[1]] = get_domain(eval(rule[2], {**PRIMITIVES, **known}))
+                domains[rule[1]] = get_domain(eval(rule[2][0], {**PRIMITIVES, **known}))
             else:
                 eval_string = "intersection("
                 for i in range(len(rule[2])):
-                    eval_string += "eval(rule[0][2][" + str(i) + "], {**PRIMITIVES, **known})"
+                    eval_string += rule[2][i]
                     if i < len(rule[2]) -1:
                         eval_string += ","
                 eval_string += ")"
+                print(eval_string)
                 eval_result = eval(eval_string, {**PRIMITIVES, **known})
                 if type(eval_result[0]) is sympy.geometry.point.Point2D:
                     domains[rule[1]] = eval_result
                 else:
                     domains[rule[1]] = get_domain(eval(eval_string[0], {**PRIMITIVES, **known}))
-
         # elif rule[0] == ":=":
-        #
-        # else: #rule[0] == "assert"
 
+        else: #rule[0] == "assert"
+            if type(domains[rule[1]]) is list:
+                # list_string = ""
+                # for i in range(len(domains[rule[1]])):
+                #     list_string += "Point(" + str(domains[rule[1]][i].x) + ", " + str(domains[rule[1]][i].y) + ")"
+                #     if i < (len(domains[rule[1]]) - 1):
+                #         list_string += ", "
+                # print(f'lambda {rule[1]}: min({list_string})')
+                # objfunc = eval(f'lambda {rule[1]}: min({list_string})', {**PRIMITIVES, **known})
+                known[rule[1]] = solveWithoutHillClimbing(rule, domains[rule[1]], known)
+            else:
+                objfunc = eval(f'lambda {rule[1]}: {rule[2]}', {**PRIMITIVES, **known})
+                known[rule[1]] = solve(domains[rule[1]], objfunc)
 
-    # c :∈ ray(a, b)
-    domain_c = ray_domain(eval(rules[0][2], {**PRIMITIVES, **known})) #string eval, globals, locals
-    # assert dist(a, c) - dist(a, b)   [depends on c]
-    objfunc_c = eval(f'lambda {rules[0][1]}: {rules[1][1]}', {**PRIMITIVES, **known})
-    known['c'] = solve(domain_c, objfunc_c)
     print(known)
 
-if __name__ == '__main__':
-    # p1 = Point(0,1)
-    # p2 = Point(2,3)
-    # l1 = Line(p1, p2)
-    # print(type(Circle(p1, 19)))
-    known = {"a": Point(0,1), "b": Point(2,2)}
-    rules = [
-        [":in", "c", "ray(a, b)"],
-        ["assert", "dist(a, c) - dist(c, b)"]
-    ]
-    hillClibing(known, rules)
-    # result = spo.minimize(myFunction, 0.0)
-    # result = spo.minimize(myFunction, [0.0, 0.0], method='Nelder-Mead', options={'maxiter': 1e9, 'maxfev': 1e9})
-    # print(result)
-    # if result.success:
-    #     print(f"x,y={result.x} f(x,y)={result.fun}")
-    # else:
-    #     print("error")
+
+    # # c :∈ ray(a, b)
+    # domain_c = ray_domain(eval(rules[0][2], {**PRIMITIVES, **known})) #string eval, globals, locals
+    # # assert dist(a, c) - dist(a, b)   [depends on c]
+    # objfunc_c = eval(f'lambda {rules[0][1]}: {rules[1][1]}', {**PRIMITIVES, **known})
+    # known['c'] = solve(domain_c, objfunc_c)
+    # print(known)
+
