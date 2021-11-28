@@ -1,5 +1,4 @@
 #TODO:
-# TODO:  change orth to rotate in 90 degrees
 # Handle asserts
 # Define an api for the synthesis module
 # - Take care of "error loading file" errors in souffle (for example create empty files)
@@ -11,26 +10,55 @@ import os
 import shutil
 import re
 import csv
-from sympy import Point
+from sympy import Point, pi
 # Notice: should download sympy
 #from sympy.geometry import Point, Circle, Line, intersection
+
+def deg_to_rad(deg):
+    return (2*pi)*(float(deg)/360)
 
 class Exercise:
     def __init__(self, name):
         # Note: symbols should come from the front
         self.name = name
         self.dl_file = None
-        self.output_vars = None
-        self.known_symbols = None
+        self.output_vars = []
+        self.known_symbols = {}
 
-    def write_dl(self, statements):
+    def build_exercise_from_statements(self, statements):
+        self._write_dl(statements)
+        for s in statements:
+            if s.predicate == "known":
+                var_name = s.vars[0]
+                var_val = s.vars[1]
+                # Variable shouldnt be in known  twice
+                assert(var not in self.known_symbols)
+                if var_name in self.output_vars:
+                    self.output_vars.remove(var_name)
+                self.known_symbols[var_name] = var_val
+            else:
+                for var in s.vars:
+                    if (var not in self.known_symbols) and (var not in self.output_vars):
+                        self.output_vars.append(var)
+
+    def _write_dl(self, statements):
         # Create dl file inside souffle_in_dir folder
         # Create relevant variables from statements
         # Assumes statements is after the replacement of numbers with known symbols
         self.dl_file = os.path.join(souffle_in_dir, self.name + ".dl")
-        f = open(souffle_in_dir)
-        for statement in statements:
-            pass
+        f = open(self.dl_file, "w")
+        f.write("#include <GeometryRules.dl>\n")
+        for s in statements:
+            predicate = s.predicate[0].upper() + s.predicate[1:]
+            if s.predicate == "known":
+                f.write(predicate + "(\"" + s.vars[0] + "\").\n")
+            elif s.predicate == "rightAngle":
+                f.write("Angle(\"{}\", \"{}\", \"{}\", \"90\").\n".format(s.vars[0], s.vars[1], s.vars[2]))
+            else:
+                line_to_write = predicate + str(s.vars) + ".\n"
+                f.write(line_to_write.replace("'", "\""))
+                
+        f.close()
             
         
     def build_exercise_from_dl(self, dl_file, output_vars, known_symbols):
@@ -302,13 +330,7 @@ def produce_assert_helper(statement, known_symbols, output_vars):
     # TODO: Define an api for the synthesis module
     predicate = statement.predicate.lower()
     if predicate == "dist":
-        a = statement.vars[0]
-        b = statement.vars[1]
-        res = statement.vars[2]
-        assert(a in output_vars or a in known_symbols) # Is this necessary?
-        assert(b in output_vars or b in known_symbols)
-        assert(res in output_vars or res in known_symbols)
-        return ("dist({}, {}) - {}".format(a, b, res))
+        return ("dist({}, {}) - {}".format(*statement.vars))
     elif predicate == "known":
         for var in statement.vars:
             assert(var in known_symbols)
@@ -316,10 +338,16 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         return
     elif predicate == "makeline":
         return
-    elif predicate == "angle" or "angleccw":
+    elif predicate == "rightangle":
+        return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
+    elif (predicate == "angle") or (predicate == "angleccw"):
         # angle means we dont care of its ccw or cw 
         # TODO: Make sure!!!
-        return ("angle_ccw({}, {}, {}) - {}".format(*statement.vars))
+        a = statement.vars[0]
+        b = statement.vars[1]
+        c = statement.vars[2]
+        res = statement.vars[3]
+        return ("angleCcw({}, {}, {}) - {}".format(a, b, c, deg_to_rad(res)))
     else:
         raise NotImplementedError
 
@@ -340,6 +368,8 @@ class PartialProg:
                 param_strings.append(param)
         if predicate_name == "intersection":
             return [self._help_produce_rule(params[0]), self._help_produce_rule(params[1])]
+        if predicate_name == "orth":
+            return "rotateCcw({}, pi)".format(param_strings[0])
         if len(param_strings) == 1:
             return '{}({})'.format(predicate_name, *param_strings)
         if len(param_strings) == 2:
@@ -443,7 +473,7 @@ def deductive_synthesis(exercise, partial_prog, statements):
     known_symbols = list(exercise.known_symbols.keys())
     is_done = False
     # Remove assertions on already known  symbols
-    statements = [s for s in statements if not s.is_ready(known_symbols)]
+    statements = [s for s in statements if ((s.predicate == "known") and (not s.is_ready(known_symbols)))]
     
     while not is_done:
         deductive_synthesis_iteration(souffle_script=exercise.dl_file)
@@ -526,12 +556,23 @@ def define_souffle_vars(exercise_name):
     souffle_out_dir = os.path.join(souffle_main_dir, exercise_name)
 
 
-def main(exercise, statements=[], write_output_to_file=False):
+def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=False):
     # TODO: Maybe statements should be part of exercise
-    define_souffle_vars(exercise.name)
+    if not exercise_name:
+        if exercise:
+            exercise_name = exercise.name
+        else:
+            exercise_name = "tmp"
+    
+    define_souffle_vars(exercise_name)
     create_folder()
     
     partial_prog = PartialProg()
+    if not exercise:
+        exercise = Exercise(exercise_name)
+        assert(len(statements) > 0)
+        exercise.build_exercise_from_statements(statements)
+        
     # Note: symbols is a dict we should get from the front
     partial_prog.produce_known(exercise.known_symbols)
     deductive_synthesis(exercise, partial_prog, statements)
@@ -553,14 +594,9 @@ if __name__ == "__main__":
                     dl_file=souffle_script,
                     output_vars=SAMPLES[exercise_name][0],
                     known_symbols=SAMPLES[exercise_name][1]
-                    )
-    
-    
+                    )    
     
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     print("Partial program is: ")
     partial_prog = main(exercise, write_output_to_file=True) # Note this will produce no assertion rules
     print(partial_prog)
-
-
-    
