@@ -16,18 +16,40 @@ from sympy import Point
 #from sympy.geometry import Point, Circle, Line, intersection
 
 class Exercise:
-    def __init__(self, name, output_vars, known_symbols):
+    def __init__(self, name):
         # Note: symbols should come from the front
         self.name = name
+        self.dl_file = None
+        self.output_vars = None
+        self.known_symbols = None
+
+    def write_dl(self, statements):
+        # Create dl file inside souffle_in_dir folder
+        # Create relevant variables from statements
+        # Assumes statements is after the replacement of numbers with known symbols
+        self.dl_file = os.path.join(souffle_in_dir, self.name + ".dl")
+        f = open(souffle_in_dir)
+        for statement in statements:
+            pass
+            
+        
+    def build_exercise_from_dl(self, dl_file, output_vars, known_symbols):
+        # Assume dl file is already written
+        self.dl_file = dl_file
         self.output_vars = output_vars
         self.known_symbols = known_symbols
 
-#TODO: Change tuples to points
-SAMPLES = {"triangle": Exercise("triangle", output_vars=["Y"],          known_symbols={"X": Point(0, 0), "Z":Point(1, 0), "d": 1}),
-        "myTriangle": Exercise("myTriangle", output_vars=["W", "Y"], known_symbols={"X": Point(0, 0), "Z":Point(1, 0), "Dist": 1}),
-        "square": Exercise("square", output_vars=["C", "D"], known_symbols={"A":Point(0,0), "B":Point(1, 0)}),
-        "square2": Exercise("square", output_vars=["C"], known_symbols={"A":Point(0,0), "B":Point(1, 0), "d": 1}),
-        "pentagon": Exercise("pentagon", output_vars=["B", "D", "E"], known_symbols={"A":Point(0, 0),  "C": Point(1, 0), "a":108,  "d": 1})}
+
+
+
+# name: [output_vars, known_symbols]
+SAMPLES = {"triangle": [["Y"], {"X": Point(0, 0), "Z":Point(1, 0), "d": 1}],
+        "myTriangle": [["W", "Y"], {"X": Point(0, 0), "Z":Point(1, 0), "Dist": 1}],
+        "square": [["C", "D"], {"A":Point(0,0), "B":Point(1, 0)}],
+        "square2": [["C"], {"A":Point(0,0), "B":Point(1, 0), "d": 1}],
+        "pentagon": [["B", "D", "E"], {"A":Point(0, 0),  "C": Point(1, 0), "a":deg_to_rad(120),  "d": 1}],
+        "9gon": [["C", "D", "E", "F", "G", "H", "I"], {"A":Point(0, 0),  "B": Point(1, 0), "d": 1}]
+        }
 
 
 MIN_APPLY = 1
@@ -139,7 +161,7 @@ relations = {
 # These are relations that has "make" relations (to help create their data)
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
 
-def run_souffle():
+def run_souffle(souffle_script):
     os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
 # Functions to parse the results of the deduction
@@ -402,13 +424,13 @@ def emit_known_fact(output_vars, known_symbols, var):
     output_vars.remove(var)
     known_symbols.append(var)
 
-def deductive_synthesis_iteration():
+def deductive_synthesis_iteration(souffle_script):
     # Run souffle iteratively, until there aren't new facts in the make relations
     is_new_object = True
     while is_new_object:
         is_new_object = False
         print("Running souffle...")
-        run_souffle()
+        run_souffle(souffle_script)
         for rel in make_relations:
             if rel.make():
                 is_new_object = True
@@ -424,7 +446,7 @@ def deductive_synthesis(exercise, partial_prog, statements):
     statements = [s for s in statements if not s.is_ready(known_symbols)]
     
     while not is_done:
-        deductive_synthesis_iteration()
+        deductive_synthesis_iteration(souffle_script=exercise.dl_file)
         locus_per_var = best_known_locus_for_each_var(output_vars)
         var, locus, dim = get_best_output_var(output_vars, locus_per_var)
         if not var:
@@ -502,12 +524,11 @@ def define_souffle_vars(exercise_name):
     souffle_in_dir = os.path.join(souffle_main_dir, exercise_name)
     global souffle_out_dir
     souffle_out_dir = os.path.join(souffle_main_dir, exercise_name)
-    global souffle_script
-    souffle_script = os.path.join("tmpInput", exercise_name + ".dl")
 
-def main(exercise, exercise_name, statements=None, write_output_to_file=False):
+
+def main(exercise, statements=[], write_output_to_file=False):
     # TODO: Maybe statements should be part of exercise
-    define_souffle_vars(exercise_name)
+    define_souffle_vars(exercise.name)
     create_folder()
     
     partial_prog = PartialProg()
@@ -524,10 +545,22 @@ def main(exercise, exercise_name, statements=None, write_output_to_file=False):
       
 if __name__ == "__main__":
     # Basiccaly everything here shouldn't happen when running the whole program (the input should come from the front and the output should go to the numeric search
-    exercise_name = "pentagon"
-    exercise = SAMPLES[exercise_name]
+    exercise_name = "square2"
+    
+    souffle_script = os.path.join("tmpInput", exercise_name + ".dl")
+    exercise = Exercise(exercise_name)
+    exercise.build_exercise_from_dl(
+                    dl_file=souffle_script,
+                    output_vars=SAMPLES[exercise_name][0],
+                    known_symbols=SAMPLES[exercise_name][1]
+                    )
+    
+    
     
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     print("Partial program is: ")
-    partial_prog = main(exercise, exercise_name=exercise_name, write_output_to_file=True) # Note this will produce no assertion rules
+    partial_prog = main(exercise, write_output_to_file=True) # Note this will produce no assertion rules
     print(partial_prog)
+
+
+    
