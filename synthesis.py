@@ -27,19 +27,19 @@ class Exercise:
 
     def build_exercise_from_statements(self, statements):
         self._write_dl(statements)
+        # Add variables to known and output vars
         for s in statements:
             if s.predicate == "known":
                 var_name = s.vars[0]
                 var_val = s.vars[1]
                 # Variable shouldnt be in known  twice
-                assert(var not in self.known_symbols)
-                if var_name in self.output_vars:
-                    self.output_vars.remove(var_name)
+                assert(var_name not in self.known_symbols)
+                assert(var_name not in self.output_vars)
                 self.known_symbols[var_name] = var_val
-            else:
-                for var in s.vars:
-                    if (var not in self.known_symbols) and (var not in self.output_vars):
-                        self.output_vars.append(var)
+            elif s.predicate == "output":
+                assert(len(s.vars) == 1)
+                assert(s.vars[0] not in self.known_symbols)
+                self.output_vars.append(s.vars[0])
 
     def _write_dl(self, statements):
         # Create dl file inside souffle_in_dir folder
@@ -49,11 +49,15 @@ class Exercise:
         f = open(self.dl_file, "w")
         f.write("#include <GeometryRules.dl>\n")
         for s in statements:
+            # Notice if there is a predicate that has only 1 var - it should be handled seperatly
             predicate = s.predicate[0].upper() + s.predicate[1:]
             if s.predicate == "known":
                 f.write(predicate + "(\"" + s.vars[0] + "\").\n")
             elif s.predicate == "rightAngle":
                 f.write("Angle(\"{}\", \"{}\", \"{}\", \"90\").\n".format(s.vars[0], s.vars[1], s.vars[2]))
+            elif (s.predicate == "neq") or (s.predicate == "output"):
+                # neq shouldnt be in dl file (only as assert)
+                pass
             else:
                 line_to_write = predicate + str(s.vars) + ".\n"
                 f.write(line_to_write.replace("'", "\""))
@@ -513,22 +517,9 @@ def deductive_synthesis(exercise, partial_prog, statements):
     for s in statements:
         print(s)
     print()
-# Functions to prepare for the deduction part
+    
 
-def parse_spec():
-    # Open spec file and parse it. Return  output variable if exist
-    # TODO: Create appropriate facts file\ dl file from the input
-    with open("example.spec", "r") as f:
-        for line in f.readlines():
-            line = line.strip("\n")
-            if line.startswith("dist"):
-                x,y,dist = re.compile("dist\((\w+),(\w+)\)=(\d*)").findall(line)[0]
-            if line.startswith("known"):
-                pass
-            if line.startswith("?"):
-                # This is output variable
-                output_var = re.compile("\?\((\w+)\)").findall(line)
-    return output_var
+# Functions to prepare for the deduction part
 
 def create_folder():
     #TODO: create empty facts files
@@ -557,7 +548,10 @@ def define_souffle_vars(exercise_name):
 
 
 def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=False):
-    # TODO: Maybe statements should be part of exercise
+    # Must get either exercise or statements (or both if they match).
+    # exercise_name is optional
+    if exercise and exercise_name:
+        assert(exercise == exercise_name)
     if not exercise_name:
         if exercise:
             exercise_name = exercise.name
@@ -586,8 +580,9 @@ def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=
       
 if __name__ == "__main__":
     # Basiccaly everything here shouldn't happen when running the whole program (the input should come from the front and the output should go to the numeric search
-    exercise_name = "square2"
     
+    # This is an example of useing synthesis straight from dl file
+    exercise_name = "square2"
     souffle_script = os.path.join("tmpInput", exercise_name + ".dl")
     exercise = Exercise(exercise_name)
     exercise.build_exercise_from_dl(
