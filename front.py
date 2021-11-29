@@ -81,7 +81,6 @@ class Statement:
         return "{}{}".format(self.predicate, self.vars)
         
 
-# TODO: Should follow the format of statements I use in free text
 def parse_dl(input_file):
     # Parse input (right now in the form of dl file)
     f = open(input_file, "r")
@@ -95,6 +94,7 @@ def parse_dl(input_file):
             continue;
         tmp = re.compile("(\w+)").findall(s)
         predicate = tmp[0]
+        predicate = predicate[0].lower() + predicate[1:]
         vars = []
         for i in tmp[1:]:
             vars.append(i)
