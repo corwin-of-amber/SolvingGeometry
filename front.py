@@ -95,6 +95,7 @@ def parse_dl(input_file):
             continue;
         tmp = re.compile("(\w+)").findall(s)
         predicate = tmp[0]
+        predicate = predicate[0].lower() + predicate[1:]
         vars = []
         for i in tmp[1:]:
             vars.append(i)

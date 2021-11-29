@@ -27,11 +27,25 @@ SAMPLES = {"triangle": [
         ]
 }
 
+# Different functions for various ways to run the program (so that we are able to run each part seperately, as well as everything together)
 
 def skip_front(exercise_name):
     # Allows to uses input from sample and  skip the front
     statements=front.build_statements(SAMPLES[exercise_name])
     return statements
+
+def get_partial_prog_from_dl(exercise_name, dl_script_path=None):
+    if not dl_script_path:
+        dl_script_path = script = os.path.join("tmpInput", exercise_name + ".dl")
+    statements = front.parse_dl(dl_script_path)
+    exercise = synthesis.Exercise(exercise_name)
+    exercise.build_exercise_from_dl(
+                    dl_file=dl_script_path,
+                    output_vars=synthesis.SAMPLES[exercise_name][0],
+                    known_symbols=synthesis.SAMPLES[exercise_name][1]
+                    )
+    partial_prog = synthesis.main(exercise=exercise, exercise_name=exercise_name, statements=statements)
+    return partial_prog
 
 if __name__ == '__main__':
 

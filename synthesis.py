@@ -72,8 +72,6 @@ class Exercise:
         self.known_symbols = known_symbols
 
 
-
-
 # name: [output_vars, known_symbols]
 SAMPLES = {"triangle": [["Y"], {"X": Point(0, 0), "Z":Point(1, 0), "d": 1}],
         "myTriangle": [["W", "Y"], {"X": Point(0, 0), "Z":Point(1, 0), "Dist": 1}],
@@ -551,7 +549,7 @@ def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=
     # Must get either exercise or statements (or both if they match).
     # exercise_name is optional
     if exercise and exercise_name:
-        assert(exercise == exercise_name)
+        assert(exercise.name == exercise_name)
     if not exercise_name:
         if exercise:
             exercise_name = exercise.name
@@ -589,7 +587,7 @@ if __name__ == "__main__":
                     dl_file=souffle_script,
                     output_vars=SAMPLES[exercise_name][0],
                     known_symbols=SAMPLES[exercise_name][1]
-                    )    
+                    )
     
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     print("Partial program is: ")
