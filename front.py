@@ -1,5 +1,6 @@
 import re
 from sympy import Point, pi
+from  utils import is_number, deg_to_rad
 
 SAMPLES = {
     "triangle": ["dist(X,Y)=136",
@@ -34,6 +35,7 @@ SAMPLES = {
                "?(C)",
                "?(D)"
     ],
+    #TODO: Add square2
     "pentagon": ["dist(A,B)=d",
                 "dist(B,C)=d",
                 "dist(C,D)=d",
@@ -51,22 +53,12 @@ SAMPLES = {
                 "A!=C",
                 "A=Point(0, 0)",
                 "C=Point(1,0)",
-                "a=deg_to_rad(120)",
+                "a=deg_to_rad(120)", # TODO: Should make this interface better for the user
                 "d=1",
                 "?(B)",
                 "?(D)",
                 "?(E)"]
             }
-
-def deg_to_rad(deg):
-    return (2*pi)*(float(deg)/360)
-
-def is_number(string):
-    for i in string:
-        if not i.isdigit():
-            return False
-    return True
-
 # User writes: 
 # dist(A,B) = 10
 # A = Point(1,5)
