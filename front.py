@@ -1,5 +1,6 @@
 import re
 from sympy import Point, pi
+from  utils import is_number, deg_to_rad
 
 SAMPLES = {
     "triangle": ["dist(X,Y)=136",
@@ -10,6 +11,31 @@ SAMPLES = {
                 "Z=Point(136,0)",
                 "136=136",
                         "?(Y)"],
+    "myTriangle": ["?(W)",
+                    "?(Y)",
+                    "X=Point(0, 0)",
+                    "Z=Point(1, 0)",
+                    "Dist=1",
+                    "W!=X",
+                    "dist(X,Y)=Dist",
+                    "dist(Z,Y)=Dist",
+                    "dist(W,Y)=Dist",
+                    "dist(Z,W)=Dist"
+                    ],
+    "square": ["dist(A,B)=d",
+               "dist(B,C)=d",
+               "dist(C,D)=d",
+               "dist(D,A)=d",
+               "A!=B",
+               "A!=C",
+               "B!=D",
+               "angle(A,D,C)=90",
+               "A=Point(0,0)",
+               "B=Point(1,0)",
+               "?(C)",
+               "?(D)"
+    ],
+    #TODO: Add square2
     "pentagon": ["dist(A,B)=d",
                 "dist(B,C)=d",
                 "dist(C,D)=d",
@@ -27,22 +53,12 @@ SAMPLES = {
                 "A!=C",
                 "A=Point(0, 0)",
                 "C=Point(1,0)",
-                "a=deg_to_rad(120)",
+                "a=deg_to_rad(120)", # TODO: Should make this interface better for the user
                 "d=1",
                 "?(B)",
                 "?(D)",
                 "?(E)"]
             }
-
-def deg_to_rad(deg):
-    return (2*pi)*(float(deg)/360)
-
-def is_number(string):
-    for i in string:
-        if not i.isdigit():
-            return False
-    return True
-
 # User writes: 
 # dist(A,B) = 10
 # A = Point(1,5)
@@ -119,6 +135,9 @@ def parse_line(line):
             predicate = res[0]
         else:
             predicate = None
+        if predicate and (predicate == "angle") and right == "90":
+            vars = re.compile("\w+\((.*)\)").findall(left)[0].split(",")
+            return ["rightAngle", vars]
         if predicate and (predicate in POSSIBLE_PREDICATES):
             vars = re.compile("\w+\((.*)\)").findall(left)[0].split(",")
             vars.append(right)

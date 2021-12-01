@@ -10,12 +10,10 @@ import os
 import shutil
 import re
 import csv
-from sympy import Point, pi
+from sympy import Point
+from utils import deg_to_rad, is_number
 # Notice: should download sympy
 #from sympy.geometry import Point, Circle, Line, intersection
-
-def deg_to_rad(deg):
-    return (2*pi)*(float(deg)/360)
 
 class Exercise:
     def __init__(self, name):
@@ -347,12 +345,9 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
     elif (predicate == "angle") or (predicate == "angleccw"):
         # angle means we dont care of its ccw or cw 
-        # TODO: Make sure!!!
-        a = statement.vars[0]
-        b = statement.vars[1]
-        c = statement.vars[2]
-        res = statement.vars[3]
-        return ("angleCcw({}, {}, {}) - {}".format(a, b, c, deg_to_rad(res)))
+        # Notice there shouldnt be an angle in degrees here
+        assert(not is_number(statement.vars[3]))
+        return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
     else:
         raise NotImplementedError("predicate {} isn't implemented".format(predicate))
 
