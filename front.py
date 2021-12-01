@@ -7,7 +7,7 @@ SAMPLES = {
                 "X=Point(0,0)",
                 "dist(Z,Y)=136",
                 "X!=Z",
-                "Z=Point(1,0)",
+                "Z=Point(136,0)",
                 "136=136",
                         "?(Y)"],
     "pentagon": ["dist(A,B)=d",

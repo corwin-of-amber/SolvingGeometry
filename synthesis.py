@@ -336,7 +336,12 @@ def produce_assert_helper(statement, known_symbols, output_vars):
             assert(var in known_symbols)
         # In this case there isn't an assertion error
         return
+    elif predicate == "output":
+        return
     elif predicate == "makeline":
+        return
+    elif predicate == "neq":
+        # TODO: Implement this
         return
     elif predicate == "rightangle":
         return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
@@ -349,7 +354,7 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         res = statement.vars[3]
         return ("angleCcw({}, {}, {}) - {}".format(a, b, c, deg_to_rad(res)))
     else:
-        raise NotImplementedError
+        raise NotImplementedError("predicate {} isn't implemented".format(predicate))
 
 
 class PartialProg:
@@ -473,8 +478,8 @@ def deductive_synthesis(exercise, partial_prog, statements):
     known_symbols = list(exercise.known_symbols.keys())
     is_done = False
     # Remove assertions on already known  symbols
-    statements = [s for s in statements if ((s.predicate == "known") and (not s.is_ready(known_symbols)))]
-    
+    statements = [s for s in statements if ((s.predicate != "known") and (not s.is_ready(known_symbols)))]
+
     while not is_done:
         deductive_synthesis_iteration(souffle_script=exercise.dl_file)
         locus_per_var = best_known_locus_for_each_var(output_vars)
@@ -509,9 +514,10 @@ def deductive_synthesis(exercise, partial_prog, statements):
             print("Search completed")
             is_done = True
 
-    print("Note: the remaining statements")
-    for s in statements:
-        print(s)
+    if statements:
+        print("Note: the remaining statements")
+        for s in statements:
+            print(s)
     print()
     
 
