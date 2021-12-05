@@ -173,17 +173,17 @@ class Fact:
         return (self.params == other.params) and (self.relation.name == self.relation.name)
 
 relations = {
-                "Circle": Relation("Circle", is_make_relation=True),
-                "Intersection": Relation("Intersection", is_make_relation=True, should_delete_symmetry=True),
-                "Line": Relation("Line", is_make_relation=True),
-                "Raythru": Relation("Raythru", is_make_relation=True),
-                "Minus": Relation("Minus", is_make_relation=True),
-                "Known": Relation("Known", is_make_relation=True),
-                # Apply relations are here to prevent from  applying rules that are already known
-                "Apply1": Relation("Apply1", is_make_relation=True),
-                "Apply2": Relation("Apply2", is_make_relation=True),
-                "Apply3": Relation("Apply3", is_make_relation=True)
-                
+        "Circle": Relation("Circle", is_make_relation=True),
+        "PerpBisect":Relation("PerpBisect", is_make_relation=True, should_delete_symmetry=True),
+        "Intersection": Relation("Intersection", is_make_relation=True, should_delete_symmetry=True),
+        "Line": Relation("Line", is_make_relation=True),
+        "Raythru": Relation("Raythru", is_make_relation=True),
+        "Minus": Relation("Minus", is_make_relation=True),
+        "Known": Relation("Known", is_make_relation=True),
+        # Apply relations are here to prevent from  applying rules that are already known
+        "Apply1": Relation("Apply1", is_make_relation=True),
+        "Apply2": Relation("Apply2", is_make_relation=True),
+        "Apply3": Relation("Apply3", is_make_relation=True)                
             }
 # These are relations that has "make" relations (to help create their data)
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
@@ -354,21 +354,24 @@ def produce_assert_helper(statement, known_symbols, output_vars):
 
 
 class PartialProg:
+    """
+    Holds the output from the deduction procedure.
+    """
     def __init__(self):
         self.known = {}
         self.rules = []
 
-    def _help_produce_rule(self, locus_name):
-        # Problem: Apply for already known facts
+    def _help_produce_in_rule(self, locus_name):
+        # TODO: this shouldnt be a part of the partialProgram object
         predicate_name, params = get_predicate(locus_name)
         param_strings = []
         for param in params:
             if not is_leave(param):
-                param_strings.append(self._help_produce_rule(param))
+                param_strings.append(self._help_produce_in_rule(param))
             else:
                 param_strings.append(param)
         if predicate_name == "intersection":
-            return [self._help_produce_rule(params[0]), self._help_produce_rule(params[1])]
+            return [self._help_produce_in_rule(params[0]), self._help_produce_in_rule(params[1])]
         if predicate_name == "orth":
             return "rotateCcw({}, pi)".format(param_strings[0])
         if len(param_strings) == 1:
@@ -380,10 +383,12 @@ class PartialProg:
         raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
     def produce_in_rule(self, var, locus_name, dim):
-        locus_list = self._help_produce_rule(locus_name)
+        # This function  adds an in rule. It creates it as a tree of predicates
+        locus_list = self._help_produce_in_rule(locus_name)
         if type(locus_list) != list:
             locus_list = [locus_list]
         self.rules.append([":in", var, locus_list])
+        
     def produce_known(self, symbols):
         self.known = symbols
         
