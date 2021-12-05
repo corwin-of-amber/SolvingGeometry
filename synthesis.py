@@ -290,9 +290,9 @@ def get_locus_type_from_name(locus_name):
     return locations[locus_type]
     return locus_type
 
-# The function gets a locus name, and find the predicate that made the locus known (usiing the apply relation).
-# The function returns the predicate and its params
-def get_predicate(locus_name):
+# The function gets a known locus name, and find the reason it is known (using the apply relation).
+# The function returns the reason title and its params
+def get_reason(locus_name):
     # TODO: Save this for each iteration instead of calculating  from scratch
     # Find locus name inside the apply relation files, and return the relevant predicate
     for i in range(MIN_APPLY, MAX_APPLY + 1):
@@ -352,7 +352,6 @@ def produce_assert_helper(statement, known_symbols, output_vars):
     else:
         raise NotImplementedError("predicate {} isn't implemented".format(predicate))
 
-
 class PartialProg:
     """
     Holds the output from the deduction procedure.
@@ -363,23 +362,29 @@ class PartialProg:
 
     def _help_produce_in_rule(self, locus_name):
         # TODO: this shouldnt be a part of the partialProgram object
-        predicate_name, params = get_predicate(locus_name)
+        reason_title, params = get_reason(locus_name)
         param_strings = []
         for param in params:
             if not is_leave(param):
                 param_strings.append(self._help_produce_in_rule(param))
             else:
                 param_strings.append(param)
-        if predicate_name == "intersection":
-            return [self._help_produce_in_rule(params[0]), self._help_produce_in_rule(params[1])]
-        if predicate_name == "orth":
+        if reason_title == "intersection":
+            return param_strings
+        if reason_title == "orth":
             return "rotateCcw({}, pi)".format(param_strings[0])
+        if reason_title == "perp_bisect-0":
+            # This hack will work,  but it doesnt actually create a tree
+            middle_point = "({} + {}) / 2".format(param_strings[0], param_strings[1])
+            #vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
+            vec = "rotateCcw(vecFrom2Points({}, {}), pi)".format(param_strings[0], param_strings[1])
+            return 'linevec(({}), ({}))'.format(middle_point, vec)
         if len(param_strings) == 1:
-            return '{}({})'.format(predicate_name, *param_strings)
+            return '{}({})'.format(reason_title, *param_strings)
         if len(param_strings) == 2:
-            return '{}({}, {})'.format(predicate_name, *param_strings)
+            return '{}({}, {})'.format(reason_title, *param_strings)
         if len(param_strings) == 3:
-            return '{}({}, {}, {})'.format(predicate_name, *param_strings)
+            return '{}({}, {}, {})'.format(reason_title, *param_strings)
         raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
     def produce_in_rule(self, var, locus_name, dim):

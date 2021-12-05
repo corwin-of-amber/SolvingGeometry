@@ -6,7 +6,11 @@
 .output MakeCircle
 .decl Circle(center: symbol, radius: symbol, id:symbol)
 .input Circle
-  
+
+.decl MakePerpBisect(a:symbol, b:symbol)
+.output MakePerpBisect
+.decl PerpBisect(a:symbol, b:symbol, id:symbol)
+.input PerpBisect
   
 .decl Angle(a:symbol, b:symbol, c:symbol, angle:symbol)
 .decl AngleCcw(a:symbol, b:symbol, c:symbol, angle:symbol)
@@ -72,6 +76,17 @@
 
 // -- Circle --
 MakeCircle(a, d):- Dist(a, _, d).
+
+
+// -- Segment --
+MakePerpBisect(a, b):-Dist(a, c, d), Dist(b, c, d), a!=b.
+In(c, id):-PerpBisect(a, b, id), Dist(a, c, d), Dist(b, c, d).
+TypeOf("line", l):-PerpBisect(_, __, l).
+MakeKnown(l):-Known(a), Known(b), PerpBisect(a, b, l).
+//TODO: Use the right apply term
+MakeApply2(l, "perp_bisect-0", a, b):-!Known(l),Known(a), Known(b), PerpBisect(a, b, l).
+
+
 
 // -- Angle --
 MakeRaythru(b,a):-AngleCcw(a, b, _, __).
@@ -149,5 +164,6 @@ Dimension(i, 1):-TypeOf("line", i).
 Dimension(i, 1):-Circle(_, __, i).
 Dimension(i, 1):-TypeOf("ray", i).
 Dimension(i, 0):-Intersection(a, b, i), Dimension(a, 1), Dimension(b, 1), a!= b.
+Dimension(i, 1):-PerpBisect(_, __, i).
 
 KnownDimension(id, dim):-Dimension(id, dim), Known(id).

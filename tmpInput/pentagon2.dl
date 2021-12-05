@@ -15,4 +15,6 @@ AngleCcw("E","A","B","a").
 //[!=](D,A) & [!=](A,C)",
 Known("A").
 Known("C").
+Known("a").
+Known("d").
 //[?](B,D,E)
