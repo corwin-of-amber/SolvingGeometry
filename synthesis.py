@@ -10,7 +10,7 @@ import os
 import shutil
 import re
 import csv
-from sympy import Point
+from sympy import Point, pi
 from utils import deg_to_rad, is_number
 # Notice: should download sympy
 #from sympy.geometry import Point, Circle, Line, intersection
@@ -22,6 +22,7 @@ class Exercise:
         self.dl_file = None
         self.output_vars = []
         self.known_symbols = {}
+        self.other_vars = [] # Here are the rest of the vars (that arent known or required as output)
 
     def build_exercise_from_statements(self, statements):
         self._write_dl(statements)
@@ -34,10 +35,19 @@ class Exercise:
                 assert(var_name not in self.known_symbols)
                 assert(var_name not in self.output_vars)
                 self.known_symbols[var_name] = var_val
+                if var_name in self.other_vars:
+                    self.other_vars.remove(var_name)
             elif s.predicate == "output":
                 assert(len(s.vars) == 1)
-                assert(s.vars[0] not in self.known_symbols)
-                self.output_vars.append(s.vars[0])
+                var = s.vars[0]
+                assert(var not in self.known_symbols)
+                self.output_vars.append(var)
+                if var in self.other_vars:
+                    self.other_vars.remove(var)
+            else:
+                for var in s.vars:
+                    if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars:
+                        self.other_vars.append(var)
 
     def _write_dl(self, statements):
         # Create dl file inside souffle_in_dir folder
@@ -144,8 +154,8 @@ class Relation:
                                 should_mark_is_new=False)
             self._write_facts_helper(out_rel_name="In",
                                 generate_row_to_write=lambda fact:[fact.params[1], fact.id])
-        if self.name.startswith("Apply"):
-            # For apply relation - dont use id
+        elif self.name.startswith("Apply") or (self.name == "Known"):
+            # For apply and known relations - dont use id
             self._write_facts_helper(out_rel_name=self.name,
                                 generate_row_to_write=lambda fact:fact.params)
         else:
@@ -169,6 +179,12 @@ class Fact:
         self.is_new = is_new
         self.id = self.relation.name.lower() + str(len(self.relation.facts) + 1)
         
+    def  __str__(self):
+        tmp =  self.relation.name +  "("
+        for p in self.params:
+            tmp += p + ", "
+        return  tmp + ")"
+    
     def __eq__(self, other):
         return (self.params == other.params) and (self.relation.name == self.relation.name)
 
@@ -292,7 +308,7 @@ def get_locus_type_from_name(locus_name):
 
 # The function gets a known locus name, and find the reason it is known (using the apply relation).
 # The function returns the reason title and its params
-def get_reason(locus_name):
+def get_reason(symbol_name):
     # TODO: Save this for each iteration instead of calculating  from scratch
     # Find locus name inside the apply relation files, and return the relevant predicate
     for i in range(MIN_APPLY, MAX_APPLY + 1):
@@ -300,7 +316,7 @@ def get_reason(locus_name):
         f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".facts"), "r")
         csv_reader = csv.reader(f, delimiter="\t")
         for row in csv_reader:
-            if (row[0] == locus_name):
+            if (row[0] == symbol_name):
                 f.close()
                 return row[1], row[2:]
                 
@@ -360,13 +376,13 @@ class PartialProg:
         self.known = {}
         self.rules = []
 
-    def _help_produce_in_rule(self, locus_name):
+    def _help_produce_rule(self, locus_name):
         # TODO: this shouldnt be a part of the partialProgram object
         reason_title, params = get_reason(locus_name)
         param_strings = []
         for param in params:
             if not is_leave(param):
-                param_strings.append(self._help_produce_in_rule(param))
+                param_strings.append(self._help_produce_rule(param))
             else:
                 param_strings.append(param)
         if reason_title == "intersection":
@@ -387,9 +403,13 @@ class PartialProg:
             return '{}({}, {}, {})'.format(reason_title, *param_strings)
         raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
+    def produce_equal_rule(self, var_name):
+        val = self._help_produce_rule(var_name)
+        self.rules.append([":=", var_name, val])
+        
     def produce_in_rule(self, var, locus_name, dim):
         # This function  adds an in rule. It creates it as a tree of predicates
-        locus_list = self._help_produce_in_rule(locus_name)
+        locus_list = self._help_produce_rule(locus_name)
         if type(locus_list) != list:
             locus_list = [locus_list]
         self.rules.append([":in", var, locus_list])
@@ -476,10 +496,20 @@ def deductive_synthesis_iteration(souffle_script):
             if rel.make():
                 is_new_object = True
 
+# The function returns all the symbols in Known relation in the datalog but the output vars
+# Notice this doesnt return symbols that were known by input
+def get_known_symbols():
+    known = []
+    for fact in relations["Known"].facts:
+        assert(len(fact.params) == 1)
+        known.append(fact.params[0])
+    return known
+
 # The function create the partial program for the numeric search algorithm
 # TODO: improve assertion rules - seperate them for each var and make sure we add them in the right time
 def deductive_synthesis(exercise, partial_prog, statements):
-    output_vars = exercise.output_vars.copy()
+    # TODO: Should still distinguish between required out to others in checking if we are done
+    output_vars = exercise.output_vars.copy() + exercise.other_vars.copy()
     # Create a copy of all known symbols names
     known_symbols = list(exercise.known_symbols.keys())
     is_done = False
@@ -488,6 +518,12 @@ def deductive_synthesis(exercise, partial_prog, statements):
 
     while not is_done:
         deductive_synthesis_iteration(souffle_script=exercise.dl_file)
+        for var in output_vars:
+            # TODO:  Save known to a list to make it more  efficient (or seperate all to function)
+            if var in get_known_symbols():
+                partial_prog.produce_equal_rule(var)
+                output_vars.remove(var)
+                known_symbols.append(var)
         locus_per_var = best_known_locus_for_each_var(output_vars)
         var, locus, dim = get_best_output_var(output_vars, locus_per_var)
         if not var:
@@ -499,6 +535,7 @@ def deductive_synthesis(exercise, partial_prog, statements):
                         known_symbols=known_symbols,
                         var=var)
         # A new var is known - add relevant assertion rules
+        
         cur_statements = []
         for s in statements:
             if s.is_ready(known_symbols):
