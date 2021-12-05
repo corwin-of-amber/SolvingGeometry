@@ -73,8 +73,9 @@ SAMPLES = {"triangle": [["Y"], {"X": Point(0, 0), "Z":Point(1, 0), "d": 1}],
         "myTriangle": [["W", "Y"], {"X": Point(0, 0), "Z":Point(1, 0), "Dist": 1}],
         "square": [["C", "D"], {"A":Point(0,0), "B":Point(1, 0)}],
         "square2": [["C"], {"A":Point(0,0), "B":Point(1, 0), "d": 1}],
-        "pentagon": [["B", "D", "E"], {"A":Point(0, 0),  "C": Point(1, 0), "a":deg_to_rad(120),  "d": 1}],
-        "9gon": [["C", "D", "E", "F", "G", "H", "I"], {"A":Point(0, 0),  "B": Point(1, 0), "d": 1}]
+        "pentagon": [["B", "D", "E"], {"A":Point(0, 0),  "C": Point(1, 0)}],
+        "pentagon2": [["B", "D", "E"], {"A":Point(0, 0),  "C": Point(1, 0), "a":deg_to_rad(120),  "d": 1}],
+        "9gon": [["C", "D", "E", "F", "G", "H", "I"], {"A":Point(0, 0),  "B": Point(1, 0)}]
         }
 
 
@@ -579,7 +580,7 @@ if __name__ == "__main__":
     # Basiccaly everything here shouldn't happen when running the whole program (the input should come from the front and the output should go to the numeric search
 
     # This is an example of useing synthesis straight from dl file
-    exercise_name = "square2"
+    exercise_name = "pentagon"
     souffle_script = os.path.join("tmpInput", exercise_name + ".dl")
     exercise = Exercise(exercise_name)
     exercise.build_exercise_from_dl(
@@ -589,5 +590,5 @@ if __name__ == "__main__":
                     )
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     print("Partial program is: ")
-    partial_prog = main(exercise, write_output_to_file=True) # Note this will produce no assertion rules
+    partial_prog = main(exercise=exercise, write_output_to_file=True) # Note this will produce no assertion rules
     print(partial_prog)
