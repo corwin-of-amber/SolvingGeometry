@@ -23,7 +23,7 @@ class Exercise:
         self.known_symbols = known_symbols
 
 #TODO: Change tuples to points
-SAMPLES = {"triangle": Exercise("triangle", output_vars=["Y"],          known_symbols={"X": Point(0, 0), "Z":Point(1, 0), "d": 1}),
+SAMPLES = {"triangle": Exercise("triangle", output_vars=["Y"], known_symbols={"X": Point(0, 0), "Z":Point(1, 0), "d": 1}),
         "myTriangle": Exercise("myTriangle", output_vars=["W", "Y"], known_symbols={"X": Point(0, 0), "Z":Point(1, 0), "Dist": 1}),
         "square": Exercise("square", output_vars=["C", "D"], known_symbols={"A":Point(0,0), "B":Point(1, 0)}),
         "square2": Exercise("square", output_vars=["C"], known_symbols={"A":Point(0,0), "B":Point(1, 0), "d": 1}),
