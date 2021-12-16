@@ -145,35 +145,78 @@ def parse_dl(input_file):
     
 POSSIBLE_PREDICATES = ["dist", "angleCcw", "angleCw", "angle", "segment", "makeLine"] # Also possible: !=, =, ?
 
+# Api for Statement
+# All functions gets strings as parameters
+def dist(p1, p2, dist_p1_p2):
+    return Statement("dist", vars=[p1, p2, dist_p1_p2])
+
+def angle(a, b, c, angle_between):
+    if angle_between == "90":
+        return Statement("rightAngle", vars=[a, b, c])
+    return Statement("angle", vars=[a, b, c, angle_between])
+    
+def angleCcw(a, b, c, angle_between):
+    if angle_between == "90":
+        return Statement("rightAngle", vars=[a, b, c])
+    return Statement("angleCcw", vars=[a, b, c, angle_between]) 
+        
+def angleCw(a, b, c, angle_between):
+    if angle_between == "90":
+        return Statement("rightAngle", vars=[a, b, c])
+    return Statement("angleCw", vars=[a, b, c, angle_between])
+        
+def neq(a, b):
+    return Statement("neq", vars=[a, b])
+
+def known(var, val):
+    return Statement("known",  vars=[var, eval(val)])
+
+def output(var):
+    return Statement("output", vars=[var])
+
+def parse_predicate_with_params(exp_lhs, exp_rhs=None):
+    """
+    exp_lhs is of the form: predicate(var1, var2, ...).
+    exp_rhs (if exists) if the exp value.
+    Return a string in a form ready to eval
+    """
+    # TODO: Decide whether we need exp_rhs
+    res = re.compile("(\w+)\(.*\)").findall(exp_lhs)
+    if len(res) == 0:
+        return
+    predicate = res[0]
+    if predicate and (predicate in POSSIBLE_PREDICATES):
+        vars = re.compile("\w+\((.*)\)").findall(exp_lhs)[0].split(",")
+        if exp_rhs:
+            vars.append(exp_rhs)
+        return_str = predicate +  "("
+        for var in vars:
+            return_str += "'{}',".format(var)
+        return_str += ")"
+        return return_str
+    raise NotImplementedError("statement: {} isn't implemented".format(exp_lhs))
+
 def parse_line(line):
     line = line.strip("\r")
     if line.startswith("?"):
         # Each output var should be  in a seperated  line as well
         output_var = re.compile("\?\((\w+)\)").findall(line)[0]
-        return ["output", (output_var)]
+        return output(output_var)
     if "!=" in line:
         vars = line.split("!=")
-        return ["neq", tuple(vars)]
+        assert(len(vars) == 2)
+        return neq(vars[0],  vars[1])
     if "=" in line:
         left, right = line.split("=")
-        res = re.compile("(\w+)\(.*\)").findall(left)
-        if len(res) > 0:
-            predicate = res[0]
-        else:
-            predicate = None
-        if predicate and (predicate == "angle") and right == "90":
-            vars = re.compile("\w+\((.*)\)").findall(left)[0].split(",")
-            return ["rightAngle", vars]
-        if predicate and (predicate in POSSIBLE_PREDICATES):
-            vars = re.compile("\w+\((.*)\)").findall(left)[0].split(",")
-            vars.append(right)
-            return [predicate, vars]
-        if not predicate:
+        str_to_eval = parse_predicate_with_params(left, right)
+        if not str_to_eval:
             # In this case we have: X=something
             # TODO: Maybe use the eval in the numeric part instead
-            return ["known", (left, eval(right))]
-            
-    raise NotImplementedError("statements: {} isn't implemented".format(line))
+            return known(left, right)
+        return eval(str_to_eval)
+    else:
+        str_to_eval = parse_predicate_with_params(line)
+        return eval(str_to_eval)
     
 def parse_free_text(lines):
     # Get input after it was split into lines, in a format similar to the spec in the appendix.
@@ -181,7 +224,7 @@ def parse_free_text(lines):
     # with each new line contains one statement
     # TODO: replace numbers  with constants, replace 90 degrees angle with rightAngle
     # TODO: There is still some work here (handle spaces, indicutive errors, etc)
-    statements = [] # a list of lists, each one has predicate  and tuple of variables
+    statements = [] # a list of objects from type Statement
     for line in lines:
         try:
             statements.append(parse_line(line))
@@ -189,15 +232,6 @@ def parse_free_text(lines):
             print("Failed parsing in line: " + line)
             raise e
     return statements
-    
-def build_statements(input_list):
-    # Get a list  of statements with format: [predicate, vars]
-    # Turn into a list of statement objects
-    statements = []
-    for predicate, vars in input_list:
-        statements.append(Statement(predicate=predicate, vars=vars))
-    return statements
-    
 
 def main(exercise_name=None):
     # If exercise_name is None - get input from user
@@ -207,7 +241,8 @@ def main(exercise_name=None):
     else:
         lines = input("Enter input: ").split("\n")
     print("In front - about to create statements")
-    statements = build_statements(parse_free_text(lines))
+    #statements = build_statements(parse_free_text(lines))
+    statements = parse_free_text(lines)
     print("statements are: ")
     for s in statements:
         print(s)
