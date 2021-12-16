@@ -59,10 +59,32 @@ SAMPLES = {
                 "A=Point(0, 0)", "C=Point(1,0)",
                 "a=deg_to_rad(120)", # TODO: Should make this interface better for the user
                 "d=1",
-                "?(B)",
-                "?(D)",
-                "?(E)"]
-            }
+                "?(B)", "?(D)", "?(E)"],
+    "9gon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
+            "dist(D,E)=d", "dist(E,F)=d", "dist(F,G)=d",
+            "dist(G,H)=d", "dist(I,I)=d", "angleCcw(A,B,C)=a",
+            "angleCcw(B,C,D)=a", "angleCcw(C,D,E)=a",
+            "angleCcw(D,E,F)=a", "angleCcw(E,F,G)=a",
+            "angleCcw(F,G,H)=a", "angleCcw(G,H,I)=a",
+            "angleCcw(H,I,A)=a", "angleCcw(I,A,B)=a",
+            "A=Point(0,0)", "B=Point(1,0)", "D!=A",
+            "?(C)", "?(D)", "?(E)", "?(F)", "?(G)", "?(H)", "?(I)"
+            #realont(q1), realnot(q2), intersect_2_segments
+            ],
+    'square-in-square':
+          ["dist(A,B=d", "dist(B,C=d", "dist(C,D)=d", "dist(D,A)=d", "A!=B", "A!=C", "B!=D",
+           "angle_ccw(A,D,C)=90",
+           "segment(A,B,AB)","in(E,AB)", "dist(A,E)=15",
+           "segment(B,C,BC)","in(F,BC)","!in(F,CD)",
+           "segment(C,D,CD)", "in(G,CD)", "!in(G,DA)",
+           "segment(D,A,DA)", "in(H,DA)",
+           "angle(E,F,G)=90",
+           "angle(F,G,H)=90"
+           "angle(G,H,E)=90",
+           "known(A)", "known(B)","?(C)", "?(D,)"
+           "?(E)", "?(F)", "?(G)", "?(H)"
+           ],
+    }
 # User writes: 
 # dist(A,B) = 10
 # A = Point(1,5)
