@@ -35,7 +35,17 @@ SAMPLES = {
                "?(C)",
                "?(D)"
     ],
-    #TODO: Add square2
+    "square2": [#"MakeLine(A, B)",
+                #"MakeLine(B, C)",
+                "dist(A,B)=d",
+                "dist(B,C)=d",
+                "dist(C,D)=d",
+                "angle(A,B,C)=90",
+                "A=Point(0,0)",
+                "B=Point(1,0)",
+                "d=1",
+                "?(C)"
+    ],
     "pentagon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
                 "dist(D,E)=d", "dist(E,A)=d",
                 "angleCcw(A,B,C)=a", "angleCcw(B,C,D)=a",
@@ -150,20 +160,30 @@ POSSIBLE_PREDICATES = ["dist", "angleCcw", "angleCw", "angle", "segment", "makeL
 def dist(p1, p2, dist_p1_p2):
     return Statement("dist", vars=[p1, p2, dist_p1_p2])
 
-def angle(a, b, c, angle_between):
-    if angle_between == "90":
-        return Statement("rightAngle", vars=[a, b, c])
-    return Statement("angle", vars=[a, b, c, angle_between])
+def angle_helper(angle_name, a,  b, c, angle_val):
+    s = [
+        #Statement("MakeLine", vars=[a, b]),
+        #Statement("MakeLine", vars=[b, c])
+        Statement("makeRaythru", vars=[b, a]),
+        Statement("makeRaythru", vars=[b, c])
+        ]
+    if angle_val == "90":
+        s.append(Statement("rightAngle", vars=[a, b, c]))
+        return s
+    s.append(Statement(angle_name,
+                        vars=[
+                                a, b, c, deg_to_rad(angle_val)
+                            ]))
+    return s
     
-def angleCcw(a, b, c, angle_between):
-    if angle_between == "90":
-        return Statement("rightAngle", vars=[a, b, c])
-    return Statement("angleCcw", vars=[a, b, c, angle_between]) 
+def angle(a, b, c, angle_val):
+    return angle_helper("angle", a,  b, c, angle_val)
+    
+def angleCcw(a, b, c, angle_val):
+    return angle_helper("angleCcw", a,  b, c, angle_val)
         
-def angleCw(a, b, c, angle_between):
-    if angle_between == "90":
-        return Statement("rightAngle", vars=[a, b, c])
-    return Statement("angleCw", vars=[a, b, c, angle_between])
+def angleCw(a, b, c, angle_val):
+    return angle_helper("angleCw", a,  b, c, angle_val)
         
 def neq(a, b):
     return Statement("neq", vars=[a, b])
@@ -227,10 +247,14 @@ def parse_free_text(lines):
     statements = [] # a list of objects from type Statement
     for line in lines:
         try:
-            statements.append(parse_line(line))
+            new_statements = parse_line(line)
         except Exception as e:
             print("Failed parsing in line: " + line)
             raise e
+        if type(new_statements) == list:
+            statements += new_statements
+        else:
+            statements.append(new_statements)
     return statements
 
 def main(exercise_name=None):

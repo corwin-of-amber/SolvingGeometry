@@ -353,7 +353,7 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         return
     elif predicate == "output":
         return
-    elif predicate == "makeline":
+    elif predicate.startswith("make"):
         return
     elif predicate == "neq":
         # TODO: Implement this
