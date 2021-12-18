@@ -59,9 +59,14 @@ def get_domain(entity):
     elif type(entity) is sympy.geometry.ellipse.Circle:
         return circle_domain(entity)
 
-global_rules = []
-global_known = {}
 
+def is_duplicate(known, p):
+    for k in known.values():
+        if type(k) is not sympy.geometry.point.Point2D:
+            continue
+        if abs(k.x - p.x) < EPS and abs(k.y - p.y) < EPS:
+            return True
+    return False
 
 def solveHillClimbing(rules, known):
     print("----------------------------------------------------------------")
@@ -70,81 +75,63 @@ def solveHillClimbing(rules, known):
     print("and knwon:")
     print(known)
     rule = rules[0]
-    if len(rules) == 1: #assert with only 0-dimensions
+    current_rules = copy.deepcopy(rules[1:])
+    current_known = copy.deepcopy(known)
+    if len(current_rules) == 0: #assert with only 0-dimensions
         print("in assert")
-        to_eval = "abs(" + rule[1] + ")"
-        print(f"to eval = {to_eval}")
-        eval_value = eval(to_eval, {**PRIMITIVES, **known})
+        print(f"to eval = {rule[1]}")
+        eval_value = abs(eval(rule[1], {**PRIMITIVES, **current_known}))
         print(f"eval value = {str(eval_value)}")
-        return eval_value, known
-    rules.pop(0)
+        return eval_value, current_known
     if len(rule[2]) == 1:
         print("in 1 dimension")
-        global global_rules
-        global global_known
-        global_rules = copy.deepcopy(rules)
-        global_known = copy.deepcopy(known)
-        domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **known}))
+        domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
         def objfunc(p):
-            global global_rules, global_known
-            global_rules2 = copy.deepcopy(global_rules)
-            global_known2 = copy.deepcopy(global_known)
-            global_known[rule[1]] = p
+            rules_dup = copy.deepcopy(current_rules)
+            known_dup = copy.deepcopy(current_known)
+            known_dup[rule[1]] = p
             print("***********************************")
             print(f"called objfunc with p = {p.x},{p.y} and rules:")
-            print(global_rules)
+            print(rules_dup)
             print(f"and known:")
-            print(global_known)
+            print(known_dup)
             print("***********************************")
-            res = solveHillClimbing(global_rules,global_known)[0]
-            global_rules = copy.deepcopy(global_rules2)
-            global_known = copy.deepcopy(global_known2)
+            res = solveHillClimbing(rules_dup,known_dup)[0]
             return res
-        solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Nelder-Mead")
-        known[rule[1]] = domain(*solution.x)
-        known = solveHillClimbing(rules, known)[1]
-        return solution.fun, known
+        solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Powell")
+        current_known[rule[1]] = domain(*solution.x)
+        current_known = solveHillClimbing(current_rules, current_known)[1]
+        return solution.fun, current_known
 
     else: #dimension == 0
         print("in 0 dimension")
-        eval_string = "intersection("
+        eval_res_list = []
         for i in range(len(rule[2])):
-            eval_string += rule[2][i]
-            if i < len(rule[2]) - 1:
-                eval_string += ","
-        eval_string += ")"
-        print(eval_string)
-        eval_result = eval(eval_string, {**PRIMITIVES, **known})
-        print(eval_result) #TODO: handle empty intersection
-        # if type(eval_result[0]) is sympy.geometry.point.Point2D:
-        if len(eval_result) == 1:
-            known[rule[1]] = eval_result[0] #TODO: check if needs to send inf
-            return solveHillClimbing(rules, known)
+            eval_res_list.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
+        intersection_res = intersection(*eval_res_list)
+        if len(intersection_res) == 0:
+            return float('inf'), current_known
+        if len(intersection_res) == 1:
+            current_known[rule[1]] = intersection_res[0] #TODO: check if needs to send inf
+            return solveHillClimbing(current_rules, current_known)
         else:
-            duplicate_0 = False
-            duplicate_1 = False
-            for k in known:
-                if type(k) is not sympy.geometry.point.Point2D:
-                    print("error")
-                    continue
-                if abs(known[k].x - eval_result[0].x) < EPS and abs(known[k].y - eval_result[0].y) < EPS:
-                    duplicate_0 = True
-                if abs(known[k].x - eval_result[1].x) < EPS and abs(known[k].y - eval_result[1].y) < EPS:
-                    duplicate_1 = True
-            if duplicate_0 and not duplicate_1:
-                known[rule[1]] = eval_result[1]
-                return solveHillClimbing(rules, known)
-            if duplicate_1 and not duplicate_0:
-                known[rule[1]] = eval_result[0]
-                return solveHillClimbing(rules, known)
-            known[rule[1]] = eval_result[0]
-            res1, known1 = solveHillClimbing(rules, known)
-            known[rule[1]] = eval_result[1]
-            res2, known2 = solveHillClimbing(rules, known)
-            if res1 < res2:
-                return res1, known1
+            is_duplicate_0 = is_duplicate(current_known, intersection_res[0])
+            is_duplicate_1 = is_duplicate(current_known, intersection_res[1])
+            if is_duplicate_0 and not is_duplicate_1:
+                current_known[rule[1]] = intersection_res[1]
+                return solveHillClimbing(current_rules, current_known)
+            elif is_duplicate_1 and not is_duplicate_0:
+                current_known[rule[1]] = intersection_res[0]
+                return solveHillClimbing(current_rules, current_known)
             else:
-                return res2, known2
+                current_known[rule[1]] = intersection_res[0]
+                res1, known1 = solveHillClimbing(current_rules, current_known)
+                current_known[rule[1]] = intersection_res[1]
+                res2, known2 = solveHillClimbing(current_rules, current_known)
+                if res1 < res2:
+                    return res1, known1
+                else:
+                    return res2, known2
 
 
 
