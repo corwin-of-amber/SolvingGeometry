@@ -82,16 +82,16 @@ SAMPLES = {
             #realont(q1), realnot(q2), intersect_2_segments
             ],
     'square-in-square':
-          ["dist(A,B=d", "dist(B,C=d", "dist(C,D)=d", "dist(D,A)=d", "A!=B", "A!=C", "B!=D",
-           "angle_ccw(A,D,C)=90",
+          ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d", "dist(D,A)=d", "A!=B", "A!=C", "B!=D",
+           "angleCcw(A,D,C)=90",
            "segment(A,B,AB)","in(E,AB)", "dist(A,E)=15",
            "segment(B,C,BC)","in(F,BC)","!in(F,CD)",
            "segment(C,D,CD)", "in(G,CD)", "!in(G,DA)",
            "segment(D,A,DA)", "in(H,DA)",
            "angle(E,F,G)=90",
-           "angle(F,G,H)=90"
+           "angle(F,G,H)=90",
            "angle(G,H,E)=90",
-           "known(A)", "known(B)","?(C)", "?(D,)"
+           "A=Point(0,0)", "B=Point(1,0)","?(C)", "?(D)"
            "?(E)", "?(F)", "?(G)", "?(H)"
            ],
     }
@@ -153,14 +153,15 @@ def parse_dl(input_file):
         statements.append(Statement(predicate, vars))
     return statements
     
-POSSIBLE_PREDICATES = ["dist", "angleCcw", "angleCw", "angle", "segment", "makeLine"] # Also possible: !=, =, ?
+POSSIBLE_PREDICATES = ["segment",  "angle","angleCcw", "angleCw", "dist", "in", "known", "not_in", "neq", "output"]
 
 # Api for Statement
 # All functions gets strings as parameters
-def dist(p1, p2, dist_p1_p2):
-    return Statement("dist", vars=[p1, p2, dist_p1_p2])
 
-def angle_helper(angle_name, a,  b, c, angle_val):
+def segment(a, b, name_of_segment):
+    return Statement("Segment", vars=[a, b, name_of_segment])
+
+def _angle_helper(angle_name, a,  b, c, angle_val):
     s = [
         #Statement("MakeLine", vars=[a, b]),
         #Statement("MakeLine", vars=[b, c])
@@ -177,19 +178,30 @@ def angle_helper(angle_name, a,  b, c, angle_val):
     return s
     
 def angle(a, b, c, angle_val):
-    return angle_helper("angle", a,  b, c, angle_val)
+    return _angle_helper("angle", a,  b, c, angle_val)
     
 def angleCcw(a, b, c, angle_val):
-    return angle_helper("angleCcw", a,  b, c, angle_val)
+    return _angle_helper("angleCcw", a,  b, c, angle_val)
         
 def angleCw(a, b, c, angle_val):
-    return angle_helper("angleCw", a,  b, c, angle_val)
+    return _angle_helper("angleCw", a,  b, c, angle_val)
         
-def neq(a, b):
-    return Statement("neq", vars=[a, b])
+def dist(p1, p2, dist_p1_p2):
+    return Statement("dist", vars=[p1, p2, dist_p1_p2])
 
+# Notice this is a patch - because in cant be a name for a function
+def in_func(a, domain):
+    return Statement("in", vars=[a, domain])
+
+# TODO: Perhaps add the option  for known without a value (and value will be generated)
 def known(var, val):
     return Statement("known",  vars=[var, eval(val)])
+
+def not_in(a, domain):
+    return Statement("not_in", vars=[a, domain])
+
+def neq(a, b):
+    return Statement("neq", vars=[a, b])
 
 def output(var):
     return Statement("output", vars=[var])
@@ -200,12 +212,13 @@ def parse_predicate_with_params(exp_lhs, exp_rhs=None):
     exp_rhs (if exists) if the exp value.
     Return a string in a form ready to eval
     """
-    # TODO: Decide whether we need exp_rhs
     res = re.compile("(\w+)\(.*\)").findall(exp_lhs)
     if len(res) == 0:
         return
     predicate = res[0]
     if predicate and (predicate in POSSIBLE_PREDICATES):
+        if predicate == "in":
+            predicate = "in_func"
         vars = re.compile("\w+\((.*)\)").findall(exp_lhs)[0].split(",")
         if exp_rhs:
             vars.append(exp_rhs)

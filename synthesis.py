@@ -344,19 +344,7 @@ def produce_assert_helper(statement, known_symbols, output_vars):
     # Notice this function can return None for certain predicates
     # TODO: Define an api for the synthesis module
     predicate = statement.predicate.lower()
-    if predicate == "dist":
-        return ("dist({}, {}) - {}".format(*statement.vars))
-    elif predicate == "known":
-        for var in statement.vars:
-            assert(var in known_symbols)
-        # In this case there isn't an assertion error
-        return
-    elif predicate == "output":
-        return
-    elif predicate.startswith("make"):
-        return
-    elif predicate == "neq":
-        # TODO: Implement this
+    if predicate == "segment":
         return
     elif predicate == "rightangle":
         return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
@@ -365,6 +353,23 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         # Notice there shouldnt be an angle in degrees here
         assert(not is_number(statement.vars[3]))
         return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
+    elif predicate == "dist":
+        return ("dist({}, {}) - {}".format(*statement.vars))
+    elif predicate == "known":
+        for var in statement.vars:
+            assert(var in known_symbols)
+        # In this case there isn't an assertion error
+        return
+    elif predicate == "in":
+        # TODO: Should I do something here?
+        return
+    elif predicate == "neq":
+        # TODO: Implement this
+        return
+    elif predicate == "output":
+        return
+    elif predicate.startswith("make"):
+        return
     else:
         raise NotImplementedError("predicate {} isn't implemented".format(predicate))
 
@@ -404,6 +409,10 @@ class PartialProg:
         raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
     def produce_equal_rule(self, var_name):
+        # TODO: After handling numbers in front - remove is_number checkings from here
+        # Notice this is only true since we check is_number when deciding a statement is ready
+        if (is_number(var_name)):
+            return
         val = self._help_produce_rule(var_name)
         self.rules.append([":=", var_name, val])
         
