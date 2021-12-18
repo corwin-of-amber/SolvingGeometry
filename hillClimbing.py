@@ -1,7 +1,7 @@
 import sympy
 from scipy.optimize import minimize
-from sympy import Ray, Point, Line, Segment, intersection, Circle, pi, cos, sin, sqrt
-from sympy.abc import x, y
+from sympy import Ray, Point, Line, Segment, intersection, Circle, pi, cos, sin, sqrt, N
+# from sympy.abc import x, y
 import math
 from numpy import finfo, float32
 import copy
@@ -47,7 +47,7 @@ def segment_domain(s):
     return lambda t: s.points[0] + s.direction * t
 
 def circle_domain(c): #TODO: I haven't set boundary for the minimize function, but this works
-    return lambda t: Point(c.radius*cos(2*pi*t), c.radius*sin(2*pi*t)) + c.center
+    return lambda t: Point(N(c.radius*sympy.cos(2*pi*t)), N(c.radius*sympy.sin(2*pi*t))) + c.center
 
 def get_domain(entity):
     if type(entity) is sympy.geometry.line.Ray2D:
@@ -69,42 +69,26 @@ def is_duplicate(known, p):
     return False
 
 def solveHillClimbing(rules, known):
-    print("----------------------------------------------------------------")
-    print("called solveHillClimbing with rules:")
-    print(rules)
-    print("and knwon:")
-    print(known)
     rule = rules[0]
     current_rules = copy.deepcopy(rules[1:])
     current_known = copy.deepcopy(known)
     if len(current_rules) == 0: #assert with only 0-dimensions
-        print("in assert")
-        print(f"to eval = {rule[1]}")
         eval_value = abs(eval(rule[1], {**PRIMITIVES, **current_known}))
-        print(f"eval value = {str(eval_value)}")
         return eval_value, current_known
     if len(rule[2]) == 1:
-        print("in 1 dimension")
         domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
         def objfunc(p):
             rules_dup = copy.deepcopy(current_rules)
             known_dup = copy.deepcopy(current_known)
             known_dup[rule[1]] = p
-            print("***********************************")
-            print(f"called objfunc with p = {p.x},{p.y} and rules:")
-            print(rules_dup)
-            print(f"and known:")
-            print(known_dup)
-            print("***********************************")
             res = solveHillClimbing(rules_dup,known_dup)[0]
             return res
-        solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Powell")
+        solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Nelder-Mead")
         current_known[rule[1]] = domain(*solution.x)
         current_known = solveHillClimbing(current_rules, current_known)[1]
         return solution.fun, current_known
 
     else: #dimension == 0
-        print("in 0 dimension")
         eval_res_list = []
         for i in range(len(rule[2])):
             eval_res_list.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
@@ -163,6 +147,10 @@ def hillClimbing(known, rules):
         else: #rule[0]=="assert"
             in_rules_list.append(rule)
             known = solveHillClimbing(in_rules_list, known)[1]
+            for k in known.keys():
+                if type(known[k]) is not sympy.geometry.point.Point2D:
+                    continue
+                known[k] = Point(known[k].x.round(3), known[k].y.round(3))
             in_rules_list = []
     print("*****************************************************")
     print(known)
