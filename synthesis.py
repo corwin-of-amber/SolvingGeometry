@@ -205,7 +205,9 @@ relations = {
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
 
 def run_souffle(souffle_script):
-    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
+    os.system("souffle -p {profile} -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(
+    profile=os.path.join(souffle_out_dir, "profile.log"),
+    souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
 # Functions to parse the results of the deduction
 def find_all_locations(obj_id):
@@ -443,6 +445,7 @@ class PartialProg:
         # statements: list of ready statements
         # var: name of the var we searched for in this assert
         assert_rules = ""
+        # TODO: remove var from rule
         for s in statements:
             res = produce_assert_helper(s, *args, **kwargs)
             # Notice res might be none (which means we dont need an assertion rule for that statement)
