@@ -6,13 +6,21 @@
 .output MakeCircle
 .decl Circle(center: symbol, radius: symbol, id:symbol)
 .input Circle
-  
+
+.decl Segment(a:symbol, b:symbol, ab:symbol)
+
+.decl MakePerpBisect(a:symbol, b:symbol)
+.output MakePerpBisect
+.decl PerpBisect(a:symbol, b:symbol, id:symbol)
+.input PerpBisect
   
 .decl Angle(a:symbol, b:symbol, c:symbol, angle:symbol)
 .decl AngleCcw(a:symbol, b:symbol, c:symbol, angle:symbol)
 .decl AngleCcwRays(ray0:symbol, ray1:symbol, angle:symbol)
 
 .decl Perp(l1:symbol, l2:symbol)
+
+.decl NotColinear(a:symbol, b:symbol, c:symbol)
 
 .decl MakeRaythru(a:symbol, b:symbol)
 .output MakeRaythru
@@ -26,6 +34,8 @@
 
 .decl Minus(a:symbol, b:symbol, id:symbol)
 .input Minus
+
+.decl Vopp(u:symbol, v:symbol)
 
 .decl AngleCcwVecs(u0:symbol,  u1:symbol, angle:symbol)
 
@@ -73,6 +83,22 @@
 // -- Circle --
 MakeCircle(a, d):- Dist(a, _, d).
 
+
+// -- Segment --
+MakeKnown(ab):-Segment(a, b, ab), Known(a), Known(b).
+MakeApply2(ab, "segment", a, b):-!Known(ab), Segment(a, b, ab), Known(a), Known(b).
+MakeRaythru(a, b):-!Raythru(a, b,_), In(__, ab), Segment(a, b, ab).
+In(c, ray):-In(c,ab), Segment(a, b, ab), Raythru(a, b, ray).
+
+MakePerpBisect(a, b):-Dist(a, c, d), Dist(b, c, d), a!=b.
+In(c, id):-PerpBisect(a, b, id), Dist(a, c, d), Dist(b, c, d).
+TypeOf("line", l):-PerpBisect(_, __, l).
+MakeKnown(l):-Known(a), Known(b), PerpBisect(a, b, l).
+//TODO: Use the right apply term
+MakeApply2(l, "perp_bisect-0", a, b):-!Known(l),Known(a), Known(b), PerpBisect(a, b, l).
+
+
+
 // -- Angle --
 MakeRaythru(b,a):-AngleCcw(a, b, _, __).
 MakeRaythru(b,c):-AngleCcw(_, b, c, __).
@@ -80,21 +106,19 @@ AngleCcwRays(ray0, ray1, angle):-AngleCcw(a, b, c, angle), Raythru(b,a,ray0), Ra
 MakeKnown(angle):-AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
 MakeApply3(angle, "angleCcw", a, b, c):-!Known(angle), AngleCcw(a, b, c, angle), Known(a), Known(b), Known(c).
         
+// Notice this rule wasnt at Shachar's code
+Perp(r1, r2):-Angle(a,b,c,"90"), TypeOf("ray", r1), TypeOf("ray", r2), In(a, r1), In(c, r2), Origin(r1, b), Origin(r2, b).
+
 Perp(l1, l2):-Angle(a,b,c,"90"), TypeOf("line", l1), TypeOf("line", l2), In(a, l1), In(c, l2), In(b, l1), In(b, l2).
 //TODO: Search for places where I forgot the !=
-
-MakeKnown(l):-TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
-MakeApply2(l, "linevec", a, u):-!Known(l), TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
-
-// TODO: What if there aren't two points on the line?
-MakeMinus(a, b):-TypeOf("line", l), In(a, l), In(b, l), a!=b.
-Vpar(l, vec):-Minus(a, b, vec), TypeOf("line", l), In(a, l), In(b, l).
-
-Perp(u, v):-Perp(l0, l1), Vpar(l0, u), Vpar(l1, v), TypeOf("line", l0), TypeOf("line", l1).
 
 //TODO: Why is it Perp(v,u), and there isn't Perp(u,v)?
 MakeKnown(v):-Perp(u, v), TypeOf("vec", v), Known(u).
 MakeApply1(v, "orth", u):-!Known(v), Perp(u, v), TypeOf("vec", v), Known(u).
+
+// Note shachar wrote: @ hmm not so much.. what if d=180 or d=0?
+NotColinear(a,b,c):-AngleCcw(a,b,c,d), d!="0", d!="180".
+NotColinear(a,b,c):-Angle(a,b,c,d), d!="0", d!="180".
 
 // -- Ray --
 // raythru definition
@@ -103,18 +127,40 @@ TypeOf("vec", vec):-Minus(_, __, vec).
 Vpar(ray, vec):-Minus(a, b, vec), Raythru(a, b, ray).
 Origin(ray, a),In(a, ray), In(b, ray):-Raythru(a, b, ray).
 
+MakeMinus(x, y):-TypeOf("ray", ray), In(x, ray), In(y, ray), x!=y.
+Vpar(ray, vec):-Minus(x, y, vec), TypeOf("ray", ray), In(x, ray), In(y, ray), x!=y.
+
 MakeKnown(ray):-TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
 MakeApply2(ray, "rayvec", a, u):-!Known(ray),TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
+
+//ray vopp (Notice its a bit different than the original rule, maybe I should add a Ray relation?)
+Vopp(u,v):-Raythru(a, b, ray0), Raythru(b, a, ray1), Vpar(ray0, u), Vpar(ray1, v).
 
 //ray-rotate(ccw)
 AngleCcwVecs(u0, u1, angle):-TypeOf("ray", ray0), TypeOf("ray", ray1), AngleCcwRays(ray0, ray1, angle), Vpar(ray0, u0), Vpar(ray1, u1).
 
+MakeKnown(u):-Vopp(u,v), TypeOf(u, "vec"), Known(v).
+MakeApply1(u, "voppNegate", v):-!Known(u), Vopp(u,v), TypeOf(u, "vec"), Known(v).
 
 //rotate(ccw)-1
 MakeKnown(v):-AngleCcwVecs(u, v, angle), TypeOf("vec", v), Known(u), Known(angle).
 MakeApply2(v, "rotateCcw", u, angle):-!Known(v), AngleCcwVecs(u, v, angle), TypeOf("vec", v), Known(u), Known(angle).
 MakeKnown(u):-AngleCcwVecs(u, v, angle), TypeOf("vec", u), Known(v), Known(angle).
 MakeApply2(u, "rotateCw", v, angle):-!Known(u), AngleCcwVecs(u, v, angle), TypeOf("vec", u), Known(v), Known(angle).
+
+// -- Line --
+// TODO: What if there aren't two points on the line?
+MakeMinus(a, b):-TypeOf("line", l), In(a, l), In(b, l), a!=b.
+Vpar(l, vec):-Minus(a, b, vec), TypeOf("line", l), In(a, l), In(b, l).
+
+//Notice:  this wasnt originally at Shachar
+Perp(u, v):-Perp(r0, r1), Vpar(r0, u), Vpar(r1, v), TypeOf("ray", r0), TypeOf("ray", r1).
+
+Perp(u, v):-Perp(l0, l1), Vpar(l0, u), Vpar(l1, v), TypeOf("line", l0), TypeOf("line", l1).
+
+MakeKnown(l):-TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
+MakeApply2(l, "linevec", a, u):-!Known(l), TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
+
 
 // -- Arithmetics rules --
 Dist(a, b, d):- Dist(b, a, d).
@@ -145,9 +191,11 @@ MakeKnown(vec):-Minus(a, b, vec), Known(a), Known(b).
 MakeApply2(vec, "vecFrom2Points", a, b):-!Known(vec),Minus(a, b, vec), Known(a), Known(b).
 
 
+Dimension(i, 1):-Segment(_, __, i).
 Dimension(i, 1):-TypeOf("line", i).
 Dimension(i, 1):-Circle(_, __, i).
 Dimension(i, 1):-TypeOf("ray", i).
 Dimension(i, 0):-Intersection(a, b, i), Dimension(a, 1), Dimension(b, 1), a!= b.
+Dimension(i, 1):-PerpBisect(_, __, i).
 
 KnownDimension(id, dim):-Dimension(id, dim), Known(id).
