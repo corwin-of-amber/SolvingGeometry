@@ -63,7 +63,7 @@ class Exercise:
                 f.write(predicate + "(\"" + s.vars[0] + "\").\n")
             elif s.predicate == "rightAngle":
                 f.write("Angle(\"{}\", \"{}\", \"{}\", \"90\").\n".format(s.vars[0], s.vars[1], s.vars[2]))
-            elif (s.predicate == "neq") or (s.predicate == "output"):
+            elif (s.predicate == "notIn") or (s.predicate == "neq") or (s.predicate == "output"):
                 # neq shouldnt be in dl file (only as assert)
                 pass
             else:
@@ -211,7 +211,12 @@ def run_souffle(souffle_script):
 def find_all_locations(obj_id):
     # Get an object id, parse datalog output and return list of locations it's in
     loci = []
-    f = open(os.path.join(souffle_out_dir, "In.csv"), "r")
+    try:
+        f = open(os.path.join(souffle_out_dir, "In.csv"), "r")
+    except FileNotFoundError as e:
+        print("ERROR: file wasn't found, probably a mistake in the dl file")
+        print()
+        raise e
     csv_reader = csv.reader(f, delimiter="\t")
     for row in csv_reader:
         obj, locus_id = row
@@ -353,6 +358,9 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         # Notice there shouldnt be an angle in degrees here
         assert(not is_number(statement.vars[3]))
         return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
+    elif predicate == "notcolinear":
+        # TODO: Put something here the numeric part will be able  to handle
+        return  "notColinear({}, {}, {})".format(*statement.vars)        
     elif predicate == "dist":
         return ("dist({}, {}) - {}".format(*statement.vars))
     elif predicate == "known":
@@ -363,6 +371,9 @@ def produce_assert_helper(statement, known_symbols, output_vars):
     elif predicate == "in":
         # TODO: Should I do something here?
         return
+    elif predicate == "notin":
+        # TODO: Put something here the numeric part will be able  to handle
+        return  "notIn({}, {})".format(*statement.vars)
     elif predicate == "neq":
         # TODO: Implement this
         return

@@ -3,6 +3,7 @@ from sympy import Point, pi
 from  utils import is_number, deg_to_rad
 
 SAMPLES = {
+    "test": ["angle(a,b,c)=90"],
     "triangle": ["dist(X,Y)=136",
                 "X!=Y",
                 "X=Point(0,0)",
@@ -67,7 +68,7 @@ SAMPLES = {
                 #"realnot(q)",
                 "D!=A", "A!=C",
                 "A=Point(0, 0)", "C=Point(1,0)",
-                "a=deg_to_rad(120)", # TODO: Should make this interface better for the user
+                "a=120", # TODO: Should make this interface better for the user
                 "d=1",
                 "?(B)", "?(D)", "?(E)"],
     "9gon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
@@ -94,6 +95,40 @@ SAMPLES = {
            "A=Point(0,0)", "B=Point(1,0)","?(C)", "?(D)"
            "?(E)", "?(F)", "?(G)", "?(H)"
            ],
+   'square-in-triangle':
+            ["A=Point(0,0)", "B=Point(2,0)",
+            "C=Point(1,1)",
+             "segment(A,B,AB)", "in(D,AB)",
+             "in(E,AB)",
+             "segment(A,C,AC)", "in(F,AC)",
+             "segment(B,C,BC)", "in(G,BC)",
+             "angle(D,E,F,90)",
+             "angle(E,D,G,90)",
+             "angle(D,G,F,90)",
+             "dist(D,E,d)", "dist(E,F,d)",
+             #"[!=](D,E) & [!=](D,A) & [!=](D,B) & [!=](E,B) & [!=](E,A)",
+             "!colinear(A,C,D)",
+             "!colinear(A,B,C)",
+             "!colinear(D,E,F)", "!colinear(D,E,C)","!colinear(E,F,C)",
+             "!colinear(D,G,B)",
+#                 "[!colinear](G,A,C)",
+             #"dist(E,D,x) & dist(E,F,x)",
+             "?(D)", "?(E)", "?(F)","?(G)"
+             ],
+    'tut:middle-1': # This is where I got so far (it doesnt work)
+            ["segment(A,B,AB)", "in(E,AB)", "dist(A,E,a)",
+            "dist(E,B,a)", "segment(B,C,BC)", "in(D,BC)",
+            "dist(B,D,b)", "dist(D,C,b)",
+             "segment(C,A,CA)", "in(F,CA)", "dist(C,F,c)",
+             "dist(F,A,c)", "dist(A,B,d)", "dist(A,C,d)",
+            "A!=D",
+            "A=Point(2,2)","B=Point(0,0)",
+            "?(C)", "?(D)", "?(E)", "?(F)"],
+     'SAT:angles-1': ["dist(O,A,100) & dist(O,R,100) & [!=](O,B) & [!=](O,L)",
+                 "angle_ccw(B,O,A,40)",
+                 "angle_ccw(R,O,L, 25)",
+                 "middle(L,A,O) & middle(K,B,O)",
+                 "known(O) & known(B) & [?](A,R,L,K)"],
     }
 # User writes: 
 # dist(A,B) = 10
@@ -153,7 +188,7 @@ def parse_dl(input_file):
         statements.append(Statement(predicate, vars))
     return statements
     
-POSSIBLE_PREDICATES = ["segment",  "angle","angleCcw", "angleCw", "dist", "in", "known", "not_in", "neq", "output"]
+POSSIBLE_PREDICATES = ["segment",  "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "neq", "output"]
 
 # Api for Statement
 # All functions gets strings as parameters
@@ -171,9 +206,11 @@ def _angle_helper(angle_name, a,  b, c, angle_val):
     if angle_val == "90":
         s.append(Statement("rightAngle", vars=[a, b, c]))
         return s
+    if is_number(angle_val):
+        angle_val = deg_to_rad(angle_val)
     s.append(Statement(angle_name,
                         vars=[
-                                a, b, c, deg_to_rad(angle_val)
+                                a, b, c, angle_val
                             ]))
     return s
     
@@ -186,6 +223,9 @@ def angleCcw(a, b, c, angle_val):
 def angleCw(a, b, c, angle_val):
     return _angle_helper("angleCw", a,  b, c, angle_val)
         
+def notColinear(a, b, c):
+    return Statement("notColinear", vars=[a, b, c])
+        
 def dist(p1, p2, dist_p1_p2):
     return Statement("dist", vars=[p1, p2, dist_p1_p2])
 
@@ -197,8 +237,8 @@ def in_func(a, domain):
 def known(var, val):
     return Statement("known",  vars=[var, eval(val)])
 
-def not_in(a, domain):
-    return Statement("not_in", vars=[a, domain])
+def notIn(a, domain):
+    return Statement("notIn", vars=[a, domain])
 
 def neq(a, b):
     return Statement("neq", vars=[a, b])
@@ -212,10 +252,12 @@ def parse_predicate_with_params(exp_lhs, exp_rhs=None):
     exp_rhs (if exists) if the exp value.
     Return a string in a form ready to eval
     """
-    res = re.compile("(\w+)\(.*\)").findall(exp_lhs)
+    res = re.compile("(!?\w+)\(.*\)").findall(exp_lhs)
     if len(res) == 0:
         return
     predicate = res[0]
+    if predicate.startswith("!"):
+        predicate = "not{}".format(predicate[1].upper() + predicate[2:])
     if predicate and (predicate in POSSIBLE_PREDICATES):
         if predicate == "in":
             predicate = "in_func"
