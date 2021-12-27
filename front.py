@@ -200,8 +200,8 @@ def _angle_helper(angle_name, a,  b, c, angle_val):
     s = [
         #Statement("MakeLine", vars=[a, b]),
         #Statement("MakeLine", vars=[b, c])
-        Statement("makeRaythru", vars=[b, a]),
-        Statement("makeRaythru", vars=[b, c])
+        #Statement("makeRaythru", vars=[b, a]),
+        #Statement("makeRaythru", vars=[b, c])
         ]
     if angle_val == "90":
         s.append(Statement("rightAngle", vars=[a, b, c]))
