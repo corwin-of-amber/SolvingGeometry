@@ -194,6 +194,7 @@ relations = {
         "Intersection": Relation("Intersection", is_make_relation=True, should_delete_symmetry=True),
         "Line": Relation("Line", is_make_relation=True),
         "Raythru": Relation("Raythru", is_make_relation=True),
+        "ExtendRay": Relation("ExtendRay", is_make_relation=True),
         "Minus": Relation("Minus", is_make_relation=True),
         "Known": Relation("Known", is_make_relation=True),
         # Apply relations are here to prevent from  applying rules that are already known

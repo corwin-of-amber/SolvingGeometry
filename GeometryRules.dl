@@ -27,6 +27,11 @@
 .decl Raythru(a:symbol, b:symbol, id:symbol)
 .input Raythru
 
+.decl MakeExtendRay(ray:symbol)
+.output MakeExtendRay
+.decl ExtendRay(ray: symbol, id:symbol)
+.input ExtendRay
+
 .decl Origin(ray:symbol, a:symbol)
 
 .decl MakeMinus(a:symbol, b:symbol)
@@ -147,6 +152,11 @@ MakeKnown(v):-AngleCcwVecs(u, v, angle), TypeOf("vec", v), Known(u), Known(angle
 MakeApply2(v, "rotateCcw", u, angle):-!Known(v), AngleCcwVecs(u, v, angle), TypeOf("vec", v), Known(u), Known(angle).
 MakeKnown(u):-AngleCcwVecs(u, v, angle), TypeOf("vec", u), Known(v), Known(angle).
 MakeApply2(u, "rotateCw", v, angle):-!Known(u), AngleCcwVecs(u, v, angle), TypeOf("vec", u), Known(v), Known(angle).
+
+MakeExtendRay(ray):-TypeOf("ray", ray).
+Perp(line0, line1):-Perp(ray0, ray1),  TypeOf("ray", ray0), TypeOf("ray", ray1), ExtendRay(ray0, line0), ExtendRay(ray1, line1).
+
+//In(a, l):-In(a, ray), TypeOf("ray", ray), ExtendRay(ray, l).
 
 // -- Line --
 // TODO: What if there aren't two points on the line?
