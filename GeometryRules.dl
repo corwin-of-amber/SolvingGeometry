@@ -6,6 +6,10 @@
 .output MakeCircle
 .decl Circle(center: symbol, radius: symbol, id:symbol)
 .input Circle
+.decl Dist(a: symbol, b: symbol, d:symbol)
+
+.decl Diameter(c:symbol, id:symbol)
+.decl Radius(c:symbol, id:symbol)
 
 .decl Segment(a:symbol, b:symbol, ab:symbol)
 
@@ -48,7 +52,15 @@
 .decl MakeLine(a:symbol, b:symbol)
 .output MakeLine
 
-.decl Dist(a: symbol, b: symbol, d:symbol)
+.decl MakeLinethru(x:symbol, y:symbol)
+.output MakeLinethru
+.decl Linethru(x:symbol, y:symbol, l:symbol)
+.input Linethru
+.decl Tg(l:symbol, c:symbol)
+.decl Center(c:symbol, o:symbol)
+
+// x * y = z
+.decl Prod(x:symbol, y:symbol, z:symbol)
 
 .decl MakeIntersection(locus1: symbol, locus2: symbol)
 .output MakeIntersection
@@ -88,6 +100,17 @@
 // -- Circle --
 MakeCircle(a, d):- Dist(a, _, d).
 
+// TODO: Why is this correct?
+MakeKnown(c):-TypeOf("circle", c), Diameter(c, d), Known(d).
+MakeApply1(c, "circle-from-diameter", d):-!Known(c), TypeOf("circle", c), Diameter(c, d), Known(d).
+
+Dist(o, a, r):-TypeOf("circle", c), Center(c, o), In(a, c), Radius(c, r).
+MakeKnown(o):-TypeOf("circle", c), Center(c, o), Known(c).
+MakeApply1(o, "circle-center", c):-!Known(o), TypeOf("circle", c), Center(c, o), Known(c).
+TypeOf("circle", c), Center(c, o), Radius(c, r):-Circle(o, r, c).
+Diameter(c, s):-TypeOf("circle", c), In(a, c), In(b, c), Center(c, o), Segment(a, b, s), In(o, s).
+In(a, c), In(b, c):-Diameter(c, s), Segment(a, b, s).
+Angle(a, d, b, "90"):-TypeOf("circle", c), Diameter(c, s), Segment(a, b, s), In(d, c), d!=a, d!=b.
 
 // -- Segment --
 MakeKnown(dist):-Known(a), Known(b), Dist(a, b, dist).
@@ -164,25 +187,38 @@ MakeApply2(u, "rotateCw", v, angle):-!Known(u), AngleCcwVecs(u, v, angle), TypeO
 
 MakeExtendRay(ray):-TypeOf("ray", ray).
 Perp(line0, line1):-Perp(ray0, ray1),  TypeOf("ray", ray0), TypeOf("ray", ray1), ExtendRay(ray0, line0), ExtendRay(ray1, line1).
-
-//In(a, l):-In(a, ray), TypeOf("ray", ray), ExtendRay(ray, l).
+Vpar(l, u):-Vpar(ray, u),  TypeOf("ray", ray), ExtendRay(ray, l).
+TypeOf("line", l):-ExtendRay(_, l).
 
 // -- Line --
-// TODO: What if there aren't two points on the line?
-MakeMinus(a, b):-TypeOf("line", l), In(a, l), In(b, l), a!=b.
-Vpar(l, vec):-Minus(a, b, vec), TypeOf("line", l), In(a, l), In(b, l).
-
 //Notice:  this wasnt originally at Shachar
 Perp(u, v):-Perp(r0, r1), Vpar(r0, u), Vpar(r1, v), TypeOf("ray", r0), TypeOf("ray", r1).
 
 Perp(u, v):-Perp(l0, l1), Vpar(l0, u), Vpar(l1, v), TypeOf("line", l0), TypeOf("line", l1).
 
+TypeOf("line", l), In(x, l), In(y, l):-Linethru(x, y, l).
+
 MakeKnown(l):-TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
 MakeApply2(l, "linevec", a, u):-!Known(l), TypeOf("line", l), In(a, l), Vpar(l, u), Known(a), Known(u).
 
+// TODO: What if there aren't two points on the line?
+MakeMinus(a, b):-TypeOf("line", l), In(a, l), In(b, l), a!=b.
+Vpar(l, vec):-Minus(a, b, vec), TypeOf("line", l), In(a, l), In(b, l).
+
+// -- Tangent --
+MakeLinethru(o, p):-TypeOf("line", l), Tg(l, c), TypeOf("circle", c), In(p,  c), In(p, l), Center(c, o).
+Perp(l, radius):-TypeOf("line", l), Tg(l, c), TypeOf("circle", c), In(p, c), In(p, l), Center(c, o), Linethru(o, p, radius).
 
 // -- Arithmetics rules --
 Dist(a, b, d):- Dist(b, a, d).
+MakeKnown(x):-Prod(x, y, z), Known(y), Known(z).
+MakeApply2(x, "/", y, z):-!Known(x), Prod(x, y, z), Known(y), Known(z).
+MakeKnown(z):-Prod(x, y, z), Known(x), Known(y).
+MakeApply2(z, "*", x, y):-!Known(z), Prod(x, y, z), Known(x), Known(y).
+
+MakeKnown(x):-x=y, Known(y).
+MakeApply1(x, "id",  y):-!Known(x), x=y, Known(y).
+
 
 // Create intersections only between objects that aren't both from dimension 0
 MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !(Dimension(c1, 0); Dimension(c2, 0)).
