@@ -497,6 +497,15 @@ def get_known_symbols():
         known.append(fact.params[0])
     return known
 
+# The function gets all vars that are yet unknown, checks which one has become known  in  the last iteration, and returns a list of the new known vars
+def find_new_known_vars(vars):
+    new_known = []
+    known_symbols = get_known_symbols()
+    for var in vars:
+        if var in known_symbols:
+            new_known.append(var)
+    return new_known
+
 # The function create the partial program for the numeric search algorithm
 # TODO: improve assertion rules - seperate them for each var and make sure we add them in the right time
 def deductive_synthesis(exercise, partial_prog, statements):
@@ -510,45 +519,47 @@ def deductive_synthesis(exercise, partial_prog, statements):
     statements = [s for s in statements if ((s.predicate != "known") and (not s.is_ready(known_symbols)))]
 
     while not is_done:
+        new_known_vars = False
         deductive_synthesis_iteration(souffle_script=exercise.dl_file)
-        for var in (output_vars + other_vars):
-            # TODO:  Save known to a list to make it more  efficient (or seperate all to function)
-            
-            if var in get_known_symbols():
-                partial_prog.produce_equal_rule(var)
-                update_vars_state(output_vars=output_vars,
-                        other_vars=other_vars,
-                        known_symbols=known_symbols,
-                        var=var)
+        vars = find_new_known_vars(output_vars + other_vars)
+        for var in vars:
+            partial_prog.produce_equal_rule(var)
+            update_vars_state(output_vars=output_vars,
+                    other_vars=other_vars,
+                    known_symbols=known_symbols,
+                    var=var)
+        if len(vars) > 0:
+            new_known_vars = True
         locus_per_var = best_known_locus_for_each_var(output_vars + other_vars)
         var, locus, dim = get_best_output_var(locus_per_var)
-        if len(output_vars) == 0:
-            print("Search completed")
-                    # A new var is known - add relevant assertion rules
-            cur_statements = []
-            for s in statements:
-                if s.is_ready(known_symbols):
-                    cur_statements.append(s)
-            
-            partial_prog.produce_assert(
-                        statements=cur_statements,
-                        known_symbols=exercise.known_symbols)
-            
-            is_done = True
-            break
-            
-        if not var:
+        if var:
+            new_known_vars = True
+            partial_prog.produce_in_rule(var, locus, dim)
+            emit_known_fact(var=var)
+            update_vars_state(output_vars=output_vars,
+                            other_vars=other_vars,
+                            known_symbols=known_symbols,
+                            var=var)
+        if not new_known_vars:
             print("remaining output vars are: ")
             for var in output_vars:
                 print(var)
             # In this case there is no way to progress
             raise AssertionError("Not found output var with known location")
-        partial_prog.produce_in_rule(var, locus, dim)
-        emit_known_fact(var=var)
-        update_vars_state(output_vars=output_vars,
-                        other_vars=other_vars,
-                        known_symbols=known_symbols,
-                        var=var)
+
+        if is_search_completed(output_vars, locus_per_var):
+            # Question: Should I always emit known facts for all vars with dimension 0?
+            # In this case all output vars has 0 dimension
+            for var in output_vars:
+                locus, dim = locus_per_var[var]
+                partial_prog.produce_in_rule(var, locus, dim)
+                update_vars_state(output_vars=output_vars,
+                            other_vars=other_vars,
+                            known_symbols=known_symbols,
+                            var=var)
+            print("Search completed")
+            is_done = True
+        
         # A new var is known - add relevant assertion rules
         cur_statements = []
         for s in statements:
@@ -559,15 +570,6 @@ def deductive_synthesis(exercise, partial_prog, statements):
                     statements=cur_statements,
                     known_symbols=exercise.known_symbols)
         statements = [s for s in statements if not s.is_ready(known_symbols)]
-
-        if is_search_completed(output_vars, locus_per_var):
-            # Question: Should I always emit known facts for all vars with dimension 0?
-            # In this case all output vars has 0 dimension
-            for var in output_vars:
-                locus, dim = locus_per_var[var]
-                partial_prog.produce_in_rule(var, locus, dim)
-            print("Search completed")
-            is_done = True
 
     if statements:
         print("Note: the remaining statements")

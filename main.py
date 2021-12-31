@@ -55,9 +55,8 @@ if __name__ == '__main__':
     #     ['assert', 'Y', 'abs(dist(X, Y) - d) + abs(dist(Z, Y) - d)']
     # ]
     print("In main")
-    exercise_name = "pentagon"#"tut:middle-1"
-    # TODO: square2 - doesnt work yet (make line)
-    # TODO2: square-in-square also doesnt work
+    exercise_name = "tut:middle-1"
+    # TODO2: square-in-square doesnt work
     statements = front.main(exercise_name=exercise_name)
     partial_prog = synthesis.main(exercise_name=exercise_name, statements=statements)
     print("Partial program is: ")
