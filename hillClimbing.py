@@ -7,6 +7,11 @@ from numpy import finfo, float32
 import copy
 
 EPS = finfo(float32).eps
+global_rules = []
+global_not_equal = []
+global_not_in = []
+global_not_collinear = []
+
 
 def vecOpNegate(vec):
     return Point(-vec.x, -vec.y)
@@ -64,31 +69,46 @@ def is_duplicate(known, p):
     for k in known.values():
         if type(k) is not sympy.geometry.point.Point2D:
             continue
-        if abs(k.x - p.x) < EPS and abs(k.y - p.y) < EPS:
+        if abs(k.x.round(3) - p.x.round(3)) < EPS and abs(k.y.round(3) - p.y.round(3)) < EPS:
             return True
     return False
 
-def solveHillClimbing(rules, known):
-    rule = rules[0]
-    current_rules = copy.deepcopy(rules[1:])
+def is_equal(p1, p2):
+    return abs(p1.x.round(3) - p2.x.round(3)) < EPS and abs(p1.y.round(3) - p2.y.round(3)) < EPS
+
+# def handle_not_equal(known, main_var):
+
+
+def solveHillClimbing(rule_index, known):
+    rule = global_rules[rule_index]
+    print(rule_index, known, rule)
     current_known = copy.deepcopy(known)
-    if len(current_rules) == 0: #assert with only 0-dimensions
+    if rule_index == 0: #assert with only 0-dimensions
+        print("in assert")
         eval_value = abs(eval(rule[1], {**PRIMITIVES, **current_known}))
         return eval_value, current_known
+    current_index = rule_index - 1
+    if rule[0] == ":=":
+        print("in :=")
+        known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
+        return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
+        print("in 1 dimension")
         domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
         def objfunc(p):
-            rules_dup = copy.deepcopy(current_rules)
-            known_dup = copy.deepcopy(current_known)
+            print("in objfunc")
+            # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
+            known_dup = known
             known_dup[rule[1]] = p
-            res = solveHillClimbing(rules_dup,known_dup)[0]
+            res = solveHillClimbing(current_index,known_dup)[0]
             return res
         solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Nelder-Mead")
         current_known[rule[1]] = domain(*solution.x)
-        current_known = solveHillClimbing(current_rules, current_known)[1]
+        current_known = solveHillClimbing(current_index, current_known)[1]
         return solution.fun, current_known
 
     else: #dimension == 0
+        print("in 0 dimension")
         eval_res_list = []
         for i in range(len(rule[2])):
             eval_res_list.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
@@ -97,27 +117,70 @@ def solveHillClimbing(rules, known):
             return float('inf'), current_known
         if len(intersection_res) == 1:
             current_known[rule[1]] = intersection_res[0] #TODO: check if needs to send inf
-            return solveHillClimbing(current_rules, current_known)
+            return solveHillClimbing(current_index, current_known)
         else:
-            is_duplicate_0 = is_duplicate(current_known, intersection_res[0])
-            is_duplicate_1 = is_duplicate(current_known, intersection_res[1])
-            if is_duplicate_0 and not is_duplicate_1:
-                current_known[rule[1]] = intersection_res[1]
-                return solveHillClimbing(current_rules, current_known)
-            elif is_duplicate_1 and not is_duplicate_0:
-                current_known[rule[1]] = intersection_res[0]
-                return solveHillClimbing(current_rules, current_known)
-            else:
-                current_known[rule[1]] = intersection_res[0]
-                res1, known1 = solveHillClimbing(current_rules, current_known)
-                current_known[rule[1]] = intersection_res[1]
-                res2, known2 = solveHillClimbing(current_rules, current_known)
-                if res1 < res2:
-                    return res1, known1
+            for tup in global_not_equal:
+                if rule[1] == tup[0] and tup[1] in known:
+                    var = known[tup[1]]
+                elif rule[1] == tup[1] and tup[0] in known:
+                    var = known[tup[0]]
                 else:
-                    return res2, known2
+                    continue
 
+                intersection_0_equal = is_equal(intersection_res[0], var)
+                intersection_1_equal = is_equal(intersection_res[1], var)
+                if intersection_0_equal and not intersection_1_equal:
+                    current_known[rule[1]] = intersection_res[1]
+                    return solveHillClimbing(current_index, current_known)
+                if intersection_1_equal and not intersection_0_equal:
+                    current_known[rule[1]] = intersection_res[0]
+                    return solveHillClimbing(current_index, current_known)
+            for stmnt in global_not_in:
+                if rule[1] == stmnt[0] or rule[1] in stmnt[2]: #TODO: fix this
+                    dependency_list = stmnt[2].append(stmnt[0])
+                    all_known = True
+                    for var in dependency_list:
+                        if var not in known and var != rule[1]:
+                            all_known = False
+                            break
+                    if not all_known:
+                        continue
+                    domain = eval(stmnt[1], {**PRIMITIVES, **current_known})
+                    if intersection_res[0] in domain and intersection_res[1] not in domain:
+                        current_known[rule[1]] = intersection_res[1]
+                        return solveHillClimbing(current_index, current_known)
+                    if intersection_res[1] in domain and intersection_res[0] not in domain:
+                        current_known[rule[1]] = intersection_res[0]
+                        return solveHillClimbing(current_index, current_known)
 
+            for tup in global_not_collinear:
+                if rule[1] == tup[0] and tup[1] in known and tup[2] in known:
+                    p1, p2 = tup[1], tup[2]
+                elif rule[1] == tup[1] and tup[0] in known and tup[2] in known:
+                    p1, p2 = tup[0], tup[2]
+                elif rule[1] == tup[2] and tup[1] in known and tup[0] in known:
+                    p1, p2 = tup[1], tup[0]
+                else:
+                    continue
+
+                collinear_0 = Point.is_collinear(intersection_res[0],known[p1],known[p2])
+                collinear_1 = Point.is_collinear(intersection_res[1], known[p1], known[p2])
+
+                if collinear_0 and not collinear_1:
+                    current_known[rule[1]] = intersection_res[1]
+                    return solveHillClimbing(current_index, current_known)
+                if collinear_1 and not collinear_0:
+                    current_known[rule[1]] = intersection_res[0]
+                    return solveHillClimbing(current_index, current_known)
+
+            current_known[rule[1]] = intersection_res[0]
+            res1, known1 = solveHillClimbing(current_index, current_known)
+            current_known[rule[1]] = intersection_res[1]
+            res2, known2 = solveHillClimbing(current_index, current_known)
+            if res1 < res2:
+                return res1, known1
+            else:
+                return res2, known2
 
 
 PRIMITIVES = {
@@ -139,18 +202,21 @@ PRIMITIVES = {
 }
 
 
-def hillClimbing(known, rules):
-    in_rules_list = []
+def hillClimbing(known, rules, not_equal, not_in, not_collinear):
+    global global_rules, global_not_equal, global_not_in, global_not_collinear
+    global_not_equal = not_equal
+    global_not_in = not_in
+    global_not_collinear = not_collinear
     for rule in rules:
-        if rule[0] == ":in":
-            in_rules_list.append(rule)
+        if rule[0] == ":in" or rule[0] == ":=":
+            global_rules.insert(0,rule)
         else: #rule[0]=="assert"
-            in_rules_list.append(rule)
-            known = solveHillClimbing(in_rules_list, known)[1]
+            global_rules.insert(0,rule)
+            known = solveHillClimbing(len(global_rules)-1, known)[1]
             for k in known.keys():
                 if type(known[k]) is not sympy.geometry.point.Point2D:
                     continue
                 known[k] = Point(known[k].x.round(3), known[k].y.round(3))
-            in_rules_list = []
+            global_rules = []
     print("*****************************************************")
     print(known)
