@@ -88,31 +88,64 @@ def handle_not_equal(current_known, main_var, intersection_res):
         intersection_0_equal = is_equal(intersection_res[0], var)
         intersection_1_equal = is_equal(intersection_res[1], var)
         if intersection_0_equal and not intersection_1_equal:
-            current_known[rule[1]] = intersection_res[1]
-            return solveHillClimbing(current_index, current_known)
+            return 1
         if intersection_1_equal and not intersection_0_equal:
-            current_known[rule[1]] = intersection_res[0]
-            return solveHillClimbing(current_index, current_known)
+            return 0
+    return None
+
+def handle_not_in(current_known, main_var, intersection_res):
+    for stmnt in global_not_in:
+        if main_var == stmnt[0] or main_var in stmnt[2]:
+            dependency_list = copy.deepcopy(stmnt[2]).append(stmnt[0])
+            all_known = True
+            for var in dependency_list:
+                if var not in current_known and var != main_var:
+                    all_known = False
+                    break
+            if not all_known:
+                continue
+            domain = eval(stmnt[1], {**PRIMITIVES, **current_known})
+            if intersection_res[0] in domain and intersection_res[1] not in domain:
+                return 1
+            if intersection_res[1] in domain and intersection_res[0] not in domain:
+                return 0
+    return None
+
+def handle_not_collinear(current_known, main_var, intersection_res):
+    for tup in global_not_collinear:
+        if main_var == tup[0] and tup[1] in current_known and tup[2] in current_known:
+            p1, p2 = tup[1], tup[2]
+        elif main_var == tup[1] and tup[0] in current_known and tup[2] in current_known:
+            p1, p2 = tup[0], tup[2]
+        elif main_var == tup[2] and tup[1] in current_known and tup[0] in current_known:
+            p1, p2 = tup[1], tup[0]
+        else:
+            continue
+
+        collinear_0 = Point.is_collinear(intersection_res[0], current_known[p1], current_known[p2])
+        collinear_1 = Point.is_collinear(intersection_res[1], current_known[p1], current_known[p2])
+
+        if collinear_0 and not collinear_1:
+            return 1
+        if collinear_1 and not collinear_0:
+            return 0
+    return None
+
 
 
 def solveHillClimbing(rule_index, known):
     rule = global_rules[rule_index]
-    print(rule_index, known, rule)
     current_known = copy.deepcopy(known)
     if rule_index == 0: #assert with only 0-dimensions
-        print("in assert")
         eval_value = abs(eval(rule[1], {**PRIMITIVES, **current_known}))
         return eval_value, current_known
     current_index = rule_index - 1
     if rule[0] == ":=":
-        print("in :=")
         known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
         return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
-        print("in 1 dimension")
         domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
         def objfunc(p):
-            print("in objfunc")
             # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
             known_dup = known
             known_dup[rule[1]] = p
@@ -124,7 +157,6 @@ def solveHillClimbing(rule_index, known):
         return solution.fun, current_known
 
     else: #dimension == 0
-        print("in 0 dimension")
         eval_res_list = []
         for i in range(len(rule[2])):
             eval_res_list.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
@@ -132,62 +164,21 @@ def solveHillClimbing(rule_index, known):
         if len(intersection_res) == 0:
             return float('inf'), current_known
         if len(intersection_res) == 1:
-            current_known[rule[1]] = intersection_res[0] #TODO: check if needs to send inf
+            current_known[rule[1]] = intersection_res[0]
             return solveHillClimbing(current_index, current_known)
         else:
-            for tup in global_not_equal:
-                if rule[1] == tup[0] and tup[1] in current_known:
-                    var = current_known[tup[1]]
-                elif rule[1] == tup[1] and tup[0] in current_known:
-                    var = current_known[tup[0]]
-                else:
-                    continue
-
-                intersection_0_equal = is_equal(intersection_res[0], var)
-                intersection_1_equal = is_equal(intersection_res[1], var)
-                if intersection_0_equal and not intersection_1_equal:
-                    current_known[rule[1]] = intersection_res[1]
-                    return solveHillClimbing(current_index, current_known)
-                if intersection_1_equal and not intersection_0_equal:
-                    current_known[rule[1]] = intersection_res[0]
-                    return solveHillClimbing(current_index, current_known)
-            for stmnt in global_not_in:
-                if rule[1] == stmnt[0] or rule[1] in stmnt[2]: #TODO: fix this
-                    dependency_list = stmnt[2].append(stmnt[0])
-                    all_known = True
-                    for var in dependency_list:
-                        if var not in current_known and var != rule[1]:
-                            all_known = False
-                            break
-                    if not all_known:
-                        continue
-                    domain = eval(stmnt[1], {**PRIMITIVES, **current_known})
-                    if intersection_res[0] in domain and intersection_res[1] not in domain:
-                        current_known[rule[1]] = intersection_res[1]
-                        return solveHillClimbing(current_index, current_known)
-                    if intersection_res[1] in domain and intersection_res[0] not in domain:
-                        current_known[rule[1]] = intersection_res[0]
-                        return solveHillClimbing(current_index, current_known)
-
-            for tup in global_not_collinear:
-                if rule[1] == tup[0] and tup[1] in current_known and tup[2] in current_known:
-                    p1, p2 = tup[1], tup[2]
-                elif rule[1] == tup[1] and tup[0] in current_known and tup[2] in current_known:
-                    p1, p2 = tup[0], tup[2]
-                elif rule[1] == tup[2] and tup[1] in current_known and tup[0] in current_known:
-                    p1, p2 = tup[1], tup[0]
-                else:
-                    continue
-
-                collinear_0 = Point.is_collinear(intersection_res[0],current_known[p1],current_known[p2])
-                collinear_1 = Point.is_collinear(intersection_res[1], current_known[p1], current_known[p2])
-
-                if collinear_0 and not collinear_1:
-                    current_known[rule[1]] = intersection_res[1]
-                    return solveHillClimbing(current_index, current_known)
-                if collinear_1 and not collinear_0:
-                    current_known[rule[1]] = intersection_res[0]
-                    return solveHillClimbing(current_index, current_known)
+            not_equal_res = handle_not_equal(current_known, rule[1], intersection_res)
+            if not_equal_res:
+                current_known[rule[1]] = intersection_res[not_equal_res]
+                return solveHillClimbing(current_index, current_known)
+            not_in_res = handle_not_in(current_known, rule[1], intersection_res)
+            if not_in_res:
+                current_known[rule[1]] = intersection_res[not_equal_res]
+                return solveHillClimbing(current_index, current_known)
+            not_collinear_res = handle_not_collinear(current_known, rule[1], intersection_res)
+            if not_collinear_res:
+                current_known[rule[1]] = intersection_res[not_equal_res]
+                return solveHillClimbing(current_index, current_known)
 
             current_known[rule[1]] = intersection_res[0]
             res1, known1 = solveHillClimbing(current_index, current_known)
