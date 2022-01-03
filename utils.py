@@ -9,4 +9,4 @@ def is_number(string):
 
 
 def deg_to_rad(deg):
-    return (2*pi)*(float(deg)/360)
+    return str((2*pi)*(float(deg)/360))

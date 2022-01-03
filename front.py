@@ -56,18 +56,16 @@ SAMPLES = {
                 "D!=A", "A!=C",
                 "A=Point(0, 0)", "C=Point(1,0)",
                 "?(B)", "?(D)", "?(E)"],
-    "pentagon2": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
-                "dist(D,E)=d", "dist(E,A)=d",
-                "angleCcw(A,B,C)=a", "angleCcw(B,C,D)=a",
-                "angleCcw(C,D,E)=a", "angleCcw(D,E,A)=a",
-                "angleCcw(E,A,B)=a",
+    "pentagon2": ["dist(A,B)=1", "dist(B,C)=1", "dist(C,D)=1",
+                "dist(D,E)=1", "dist(E,A)=1",
+                "angleCcw(A,B,C)=120", "angleCcw(B,C,D)=120",
+                "angleCcw(C,D,E)=120", "angleCcw(D,E,A)=120",
+                "angleCcw(E,A,B)=120",
                 # TODO: Implement intersect2segmentsQ, realnot
                 #"intersect2segmentsQ(A,B,C,D,q)",
                 #"realnot(q)",
                 "D!=A", "A!=C",
                 "A=Point(0, 0)", "C=Point(1,0)",
-                "a=120", # TODO: Should make this interface better for the user
-                "d=1",
                 "?(B)", "?(D)", "?(E)"],
     "9gon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
             "dist(D,E)=d", "dist(E,F)=d", "dist(F,G)=d",
@@ -210,8 +208,6 @@ def _angle_helper(angle_name, a,  b, c, angle_val):
     if angle_val == "90":
         s.append(Statement("rightAngle", vars=[a, b, c]))
         return s
-    if is_number(angle_val):
-        angle_val = deg_to_rad(angle_val)
     s.append(Statement(angle_name,
                         vars=[
                                 a, b, c, angle_val

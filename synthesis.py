@@ -346,8 +346,10 @@ def produce_assert_helper(statement, known_symbols):
     elif (predicate == "angle") or (predicate == "angleccw"):
         # angle means we dont care of its ccw or cw 
         # Notice there shouldnt be an angle in degrees here
-        assert(not is_number(statement.vars[3]))
-        return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
+        angle = statement.vars[3]
+        if (is_number(angle)):
+            angle = deg_to_rad(angle)
+        return "angleCcw({}, {}, {}) - {}".format(*statement.vars[:-1], angle)
     elif predicate == "notcolinear":
         # TODO: implement (not as an assertion rule)
         return  
