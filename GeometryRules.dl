@@ -13,6 +13,8 @@
 
 .decl Segment(a:symbol, b:symbol, ab:symbol)
 
+.decl Middle(a:symbol, b:symbol, c:symbol)
+
 .decl MakePerpBisect(a:symbol, b:symbol)
 .output MakePerpBisect
 .decl PerpBisect(a:symbol, b:symbol, id:symbol)
@@ -119,6 +121,9 @@ MakeKnown(ab):-Segment(a, b, ab), Known(a), Known(b).
 MakeApply2(ab, "segment", a, b):-!Known(ab), Segment(a, b, ab), Known(a), Known(b).
 
 TypeOf("segment", ab):-Segment(_, __, ab).
+
+MakeKnown(b):-Middle(a, b, c), Known(a), Known(c).
+MakeApply2(b, "middle-1", a, c):-!Known(b), Middle(a, b, c), Known(a), Known(c).
 
 MakePerpBisect(a, b):-Dist(a, c, d), Dist(b, c, d), a!=b.
 In(c, id):-PerpBisect(a, b, id), Dist(a, c, d), Dist(b, c, d).

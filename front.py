@@ -122,11 +122,14 @@ SAMPLES = {
             "A!=D",
             "A=Point(2,2)","B=Point(0,0)",
             "?(C)", "?(D)", "?(E)", "?(F)"],
-     'SAT:angles-1': ["dist(O,A,100) & dist(O,R,100) & [!=](O,B) & [!=](O,L)",
-                 "angle_ccw(B,O,A,40)",
-                 "angle_ccw(R,O,L, 25)",
-                 "middle(L,A,O) & middle(K,B,O)",
-                 "known(O) & known(B) & [?](A,R,L,K)"],
+     'SAT:angles-1': [
+            "dist(O,A,100)", "dist(O,R,100)",
+            "O!=B", "O!=L",
+            "angleCcw(B,O,A,40)", "angleCcw(R,O,L,25)",
+             "middle(L,A,O)", "middle(K,B,O)",
+             "O=Point(0,0)", "B=Point(10, 0)",
+             #TODO: Make known an option"known(O)", "known(B)", 
+             "?(A)", "?(R)", "?(L)", "?(K)"],
     }
 # User writes: 
 # dist(A,B) = 10
@@ -186,13 +189,16 @@ def parse_dl(input_file):
         statements.append(Statement(predicate, vars))
     return statements
     
-POSSIBLE_PREDICATES = ["segment",  "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "neq", "output"]
+POSSIBLE_PREDICATES = ["segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "neq", "output"]
 
 # Api for Statement
 # All functions gets strings as parameters
 
 def segment(a, b, name_of_segment):
     return Statement("Segment", vars=[a, b, name_of_segment])
+
+def middle(a, b, c):
+    return Statement("Middle", vars=[a, b, c])
 
 def _angle_helper(angle_name, a,  b, c, angle_val):
     s = [
