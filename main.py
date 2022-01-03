@@ -62,4 +62,4 @@ if __name__ == '__main__':
     print("Partial program is: ")
     print(partial_prog)
     print("Perform numeric search")
-    hillClimbing.hillClimbing(partial_prog.known, partial_prog.rules)
+    hillClimbing.hillClimbing(partial_prog.known, partial_prog.rules, not_equal=[], not_in=[], not_collinear=[])

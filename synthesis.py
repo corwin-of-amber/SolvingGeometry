@@ -349,8 +349,8 @@ def produce_assert_helper(statement, known_symbols):
         assert(not is_number(statement.vars[3]))
         return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
     elif predicate == "notcolinear":
-        # TODO: Put something here the numeric part will be able  to handle
-        return  "notColinear({}, {}, {})".format(*statement.vars)        
+        # TODO: implement (not as an assertion rule)
+        return  
     elif predicate == "dist":
         return ("dist({}, {}) - {}".format(*statement.vars))
     elif predicate == "known":
@@ -362,10 +362,10 @@ def produce_assert_helper(statement, known_symbols):
         # TODO: Should I do something here?
         return
     elif predicate == "notin":
-        # TODO: Put something here the numeric part will be able  to handle
-        return  "notIn({}, {})".format(*statement.vars)
+        # TODO: Implement (not as an assertion rule but a notIn rule)
+        return
     elif predicate == "neq":
-        # TODO: Implement this
+        # TODO: Implement this (not as an assertion rule)
         return
     elif predicate == "output":
         return
@@ -396,12 +396,12 @@ class PartialProg:
         if reason_title in ["id", "circle-center", "circle-from-diameter"]:
             raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
         if reason_title == "orth":
-            return "rotateCcw({}, pi)".format(param_strings[0])
+            return "rotateCcw({}, pi/2)".format(param_strings[0])
         if reason_title == "perp_bisect-0":
             # This hack will work,  but it doesnt actually create a tree
             middle_point = "({} + {}) / 2".format(param_strings[0], param_strings[1])
             #vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
-            vec = "rotateCcw(vecFrom2Points({}, {}), pi)".format(param_strings[0], param_strings[1])
+            vec = "rotateCcw(vecFrom2Points({}, {}), pi/2)".format(param_strings[0], param_strings[1]) #TODO:  use orth here
             return 'linevec(({}), ({}))'.format(middle_point, vec)
         if len(param_strings) == 1:
             return '{}({})'.format(reason_title, *param_strings)
