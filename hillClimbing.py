@@ -141,7 +141,7 @@ def solveHillClimbing(rule_index, known):
         return eval_value, current_known
     current_index = rule_index - 1
     if rule[0] == ":=":
-        known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
+        current_known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
         return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
         domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
@@ -205,7 +205,6 @@ PRIMITIVES = {
     "vecFrom2Points": vecFrom2Points,
     "angleCcw": angleCcw,
     "intersection": intersection,
-    "ray": Ray
 }
 
 
