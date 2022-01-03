@@ -46,7 +46,7 @@ class Exercise:
                     self.other_vars.remove(var)
             else:
                 for var in s.vars:
-                    if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars:
+                    if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars and (not is_number(var)):
                         self.other_vars.append(var)
 
     def _write_dl(self, statements):
