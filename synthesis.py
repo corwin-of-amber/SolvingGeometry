@@ -11,7 +11,7 @@ import shutil
 import re
 import csv
 from sympy import Point, pi
-from utils import deg_to_rad, is_number
+from utils import deg_to_rad
 # Notice: should download sympy
 #from sympy.geometry import Point, Circle, Line, intersection
 
@@ -46,7 +46,7 @@ class Exercise:
                     self.other_vars.remove(var)
             else:
                 for var in s.vars:
-                    if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars and (not is_number(var)):
+                    if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars:
                         self.other_vars.append(var)
 
     def _write_dl(self, statements):
@@ -346,10 +346,7 @@ def produce_assert_helper(statement, known_symbols):
     elif (predicate == "angle") or (predicate == "angleccw"):
         # angle means we dont care of its ccw or cw 
         # Notice there shouldnt be an angle in degrees here
-        angle = statement.vars[3]
-        if (is_number(angle)):
-            angle = deg_to_rad(angle)
-        return "angleCcw({}, {}, {}) - {}".format(*statement.vars[:-1], angle)
+        return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
     elif predicate == "notcolinear":
         # TODO: implement (not as an assertion rule)
         return  
@@ -414,10 +411,6 @@ class PartialProg:
         raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
     def produce_equal_rule(self, var_name):
-        # TODO: After handling numbers in front - remove is_number checkings from here
-        # Notice this is only true since we check is_number when deciding a statement is ready
-        if (is_number(var_name)):
-            return
         val = self._help_produce_rule(var_name)
         self.rules.append([":=", var_name, val])
         

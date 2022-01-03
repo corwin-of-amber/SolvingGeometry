@@ -156,13 +156,10 @@ class Statement:
         for var in self.vars:
             # TODO: Shouldnt use this condition
             assert(type(var) == str)
-            if is_number(var):
-                continue
             if var not in known:
                 return False
         return True
     
-    # This is just for convenience
     def __str__(self):
         return "{}{}".format(self.predicate, self.vars)
         
@@ -187,11 +184,22 @@ def parse_dl(input_file):
         statements.append(Statement(predicate, vars))
     return statements
     
+# A dict of the form num: var_name, that represents numbers we converted to variable.
+numbers = {}
+
+def get_number_as_var(num):
+    if num in numbers:
+        return numbers[num]
+    else:
+        new_var = "num_" + str(len(numbers))
+        numbers[num] = new_var
+        return new_var
+
+    
 POSSIBLE_PREDICATES = ["segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "neq", "output"]
 
 # Api for Statement
 # All functions gets strings as parameters
-
 def segment(a, b, name_of_segment):
     return Statement("Segment", vars=[a, b, name_of_segment])
 
@@ -199,15 +207,12 @@ def middle(a, b, c):
     return Statement("Middle", vars=[a, b, c])
 
 def _angle_helper(angle_name, a,  b, c, angle_val):
-    s = [
-        #Statement("MakeLine", vars=[a, b]),
-        #Statement("MakeLine", vars=[b, c])
-        #Statement("makeRaythru", vars=[b, a]),
-        #Statement("makeRaythru", vars=[b, c])
-        ]
+    s = []
     if angle_val == "90":
         s.append(Statement("rightAngle", vars=[a, b, c]))
         return s
+    if is_number(angle_val):
+        angle_val = get_number_as_var(deg_to_rad(angle_val))
     s.append(Statement(angle_name,
                         vars=[
                                 a, b, c, angle_val
@@ -227,7 +232,10 @@ def notColinear(a, b, c):
     return Statement("notColinear", vars=[a, b, c])
         
 def dist(p1, p2, dist_p1_p2):
-    return Statement("dist", vars=[p1, p2, dist_p1_p2])
+    if is_number(dist_p1_p2):
+        dist_p1_p2 = get_number_as_var(dist_p1_p2)
+    s = [Statement("dist", vars=[p1, p2, dist_p1_p2])]
+    return s
 
 # Notice this is a patch - because in cant be a name for a function
 def in_func(a, domain):
@@ -310,6 +318,10 @@ def parse_free_text(lines):
             statements += new_statements
         else:
             statements.append(new_statements)
+    
+    # Add variables that were casted from numbers as Known statements
+    for numeric_val, var_name in numbers.items():
+        statements.append(known(var_name, numeric_val))
     return statements
 
 def main(exercise_name=None):
