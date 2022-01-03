@@ -3,6 +3,7 @@ import * as Vue from 'vue';
 
 // @ts-ignore
 import mainUI from './components/app.vue';
+import './index.css';
 
 
 async function main() {

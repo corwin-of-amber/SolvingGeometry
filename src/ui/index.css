@@ -1,0 +1,42 @@
+html, body, #app {
+    height: 100%;
+    margin: 0;
+}
+
+#app {
+    display: flex;
+    flex-direction: row;
+}
+
+#app div.pane {
+    flex-basis: 0;
+    flex-grow: 1;
+}
+
+#app div.pane#main-pane {
+    flex-grow: 3;
+}
+
+#app #left-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+#app #left-pane #list-of-samples-container {
+    padding: 9px 9px 0 9px;
+}
+
+#app #left-pane #editor-container,
+#app #left-pane #compiler-out-container {
+    flex-basis: 0;
+    flex-grow: 1;
+}
+
+#app #left-pane #editor-container > div,
+#app #left-pane #editor-container .cm-editor {
+        height: 100%;
+}
+
+#app .cm-editor.cm-focused {
+    outline: none;
+}
