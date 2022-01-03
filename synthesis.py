@@ -395,8 +395,8 @@ class PartialProg:
                 param_strings.append(param)
         if reason_title == "intersection":
             return param_strings
-        if reason_title in ["id", "circle-center", "circle-from-diameter"]:
-            raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
+        #if reason_title in ["id", "circle-center", "circle-from-diameter"]:
+            #raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
         if reason_title == "orth":
             return "rotateCcw({}, pi/2)".format(param_strings[0])
         if reason_title == "perp_bisect-0":
@@ -608,7 +608,7 @@ def define_souffle_vars(exercise_name):
     souffle_out_dir = os.path.join(souffle_main_dir, exercise_name)
 
 
-def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=False):
+def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=True):
     # Must get either exercise or statements (or both if they match).
     # exercise_name is optional
     if exercise and exercise_name:
