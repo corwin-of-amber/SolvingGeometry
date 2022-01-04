@@ -438,9 +438,11 @@ class PartialProg:
         self.known = symbols
         
     def produce_assert(self, statements, *args, **kwargs):
-        # This function decides the format of the assertion rule
-        # The helper function calculates the expression to evaluate
-        # statements: list of ready statements
+        """
+        This function decides the format of the assertion rule
+        The helper function calculates the expression to evaluate
+        statements: list of ready statements
+        """
         assert_rules = ""
         for s in statements:
             res = produce_assert_helper(s, *args, **kwargs)
@@ -514,6 +516,19 @@ def find_new_known_vars(vars):
             new_known.append(var)
     return new_known
 
+def add_assertion_rules(partial_prog, exercise, statements, known_symbols):
+    # Find statements that all their symbols are known
+    ready_statements = []
+    for s in statements:
+        if s.is_ready(known_symbols):
+            ready_statements.append(s)
+
+    # Add assert to relevant statements
+    partial_prog.produce_assert(
+                statements=ready_statements,
+                known_symbols=exercise.known_symbols)
+    
+
 # The function create the partial program for the numeric search algorithm
 # TODO: improve assertion rules - seperate them for each var and make sure we add them in the right time
 def deductive_synthesis(exercise, partial_prog, statements):
@@ -541,6 +556,13 @@ def deductive_synthesis(exercise, partial_prog, statements):
         locus_per_var = best_known_locus_for_each_var(output_vars + other_vars)
         var, locus, dim = get_best_output_var(locus_per_var)
         if var:
+            if dim == 1:
+                # Add assertion rules for previous known symbols
+                add_assertion_rules(
+                            partial_prog=partial_prog,
+                            exercise=exercise,
+                            statements=statements, known_symbols=known_symbols)
+                statements = [s for s in statements if not s.is_ready(known_symbols)]
             new_known_vars = True
             partial_prog.produce_in_rule(var, locus, dim)
             emit_known_fact(var=var)
@@ -565,20 +587,15 @@ def deductive_synthesis(exercise, partial_prog, statements):
                             other_vars=other_vars,
                             known_symbols=known_symbols,
                             var=var)
-            print("Search completed")
             is_done = True
-        
-        # A new var is known - add relevant assertion rules
-        cur_statements = []
-        for s in statements:
-            if s.is_ready(known_symbols):
-                cur_statements.append(s)
-        
-        partial_prog.produce_assert(
-                    statements=cur_statements,
-                    known_symbols=exercise.known_symbols)
-        statements = [s for s in statements if not s.is_ready(known_symbols)]
 
+    # All output vars are known - produce rest of assertion rules
+    add_assertion_rules(
+                    partial_prog=partial_prog,
+                    exercise=exercise,
+                    statements=statements, known_symbols=known_symbols)
+    statements = [s for s in statements if not s.is_ready(known_symbols)]
+    print("Search completed")
     if statements:
         print("Note: the remaining statements")
         for s in statements:
