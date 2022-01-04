@@ -341,6 +341,10 @@ def produce_assert_helper(statement, known_symbols):
     predicate = statement.predicate.lower()
     if predicate == "segment":
         return
+    if predicate == "middle":
+        # This predicate will produe the rule: 
+        # dist(middle(A, B), O)
+        return ("dist(middle({}, {}), {})").format(*statement.vars)
     elif predicate == "rightangle":
         return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
     elif (predicate == "angle") or (predicate == "angleccw"):
@@ -392,8 +396,17 @@ class PartialProg:
                 param_strings.append(param)
         if reason_title == "intersection":
             return param_strings
-        #if reason_title in ["id", "circle-center", "circle-from-diameter"]:
-            #raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
+        if reason_title == "middle-1":
+            return "vecFrom2Points(-{}, 2 * {})".format(param_strings[0], param_strings[1])
+        if reason_title == "circle-from-diameter":
+            #return "circle-from-diameter({})".format(*param_strings)
+            raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
+        if reason_title=="circle-center":
+            #return "circle-center({})".format(*param_strings)
+            raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
+        if reason_title == "id-0":
+            # TODO: try to use this and make sure its fine
+            return "{}".format(param_strings[0])
         if reason_title == "orth":
             return "rotateCcw({}, pi/2)".format(param_strings[0])
         if reason_title == "perp_bisect-0":

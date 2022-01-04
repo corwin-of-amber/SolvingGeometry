@@ -122,6 +122,8 @@ MakeApply2(ab, "segment", a, b):-!Known(ab), Segment(a, b, ab), Known(a), Known(
 
 TypeOf("segment", ab):-Segment(_, __, ab).
 
+Middle(a, b, c):-Middle(b, a, c).
+
 MakeKnown(b):-Middle(a, b, c), Known(a), Known(c).
 MakeApply2(b, "middle-1", a, c):-!Known(b), Middle(a, b, c), Known(a), Known(c).
 
@@ -222,7 +224,7 @@ MakeKnown(z):-Prod(x, y, z), Known(x), Known(y).
 MakeApply2(z, "*", x, y):-!Known(z), Prod(x, y, z), Known(x), Known(y).
 
 MakeKnown(x):-x=y, Known(y).
-MakeApply1(x, "id",  y):-!Known(x), x=y, Known(y).
+MakeApply1(x, "id-0",  y):-!Known(x), x=y, Known(y). //TODO: I dont think this can happen
 
 
 // Create intersections only between objects that aren't both from dimension 0

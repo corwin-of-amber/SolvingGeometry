@@ -36,14 +36,13 @@ SAMPLES = {
     ],
     "square2": [#"MakeLine(A, B)",
                 #"MakeLine(B, C)",
-                "dist(A,B)=d",
-                "dist(B,C)=d",
-                "dist(C,D)=d",
+                "dist(A,B)=1",
+                "dist(B,C)=1",
+                "dist(C,D)=1",
                 "angle(A,B,C)=90",
                 "A=Point(0,0)",
                 "B=Point(1,0)",
-                "d=1",
-                "?(C)"
+                "?(C)", "?(D)"
     ],
     "pentagon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
                 "dist(D,E)=d", "dist(E,A)=d",
@@ -58,9 +57,9 @@ SAMPLES = {
                 "?(B)", "?(D)", "?(E)"],
     "pentagon2": ["dist(A,B)=1", "dist(B,C)=1", "dist(C,D)=1",
                 "dist(D,E)=1", "dist(E,A)=1",
-                "angleCcw(A,B,C)=120", "angleCcw(B,C,D)=120",
-                "angleCcw(C,D,E)=120", "angleCcw(D,E,A)=120",
-                "angleCcw(E,A,B)=120",
+                "angleCcw(A,B,C)=108", "angleCcw(B,C,D)=108",
+                "angleCcw(C,D,E)=108", "angleCcw(D,E,A)=108",
+                "angleCcw(E,A,B)=108",
                 # TODO: Implement intersect2segmentsQ, realnot
                 #"intersect2segmentsQ(A,B,C,D,q)",
                 #"realnot(q)",
@@ -127,7 +126,7 @@ SAMPLES = {
              "middle(L,A,O)", "middle(K,B,O)",
              "O=Point(0,0)", "B=Point(10, 0)",
              #TODO: Make known an option"known(O)", "known(B)", 
-             "?(A)", "?(R)", "?(L)", "?(K)"],
+             "?(A)", "?(R)", "?(L)", "?(K)"]
     }
 # User writes: 
 # dist(A,B) = 10
