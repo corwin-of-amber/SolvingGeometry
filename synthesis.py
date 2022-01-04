@@ -335,7 +335,7 @@ def is_leave(term):
         f.close()
     return True
 
-def produce_assert_helper(statement, known_symbols):
+def produce_constraint_helper(statement, known_symbols):
     # Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
     # Notice this function can return None for certain predicates
     predicate = statement.predicate.lower()
@@ -346,16 +346,16 @@ def produce_assert_helper(statement, known_symbols):
         # dist(middle(A, B), O)
         return ("dist(middle({}, {}), {})").format(*statement.vars)
     elif predicate == "rightangle":
-        return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
+        return "assert", ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
     elif (predicate == "angle") or (predicate == "angleccw"):
         # angle means we dont care of its ccw or cw 
         # Notice there shouldnt be an angle in degrees here
-        return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
+        return "assert", "angleCcw({}, {}, {}) - {}".format(*statement.vars)
     elif predicate == "notcolinear":
-        # TODO: implement (not as an assertion rule)
-        return  
+        # TODO: implement according to Shira's format
+        return "not_colinear", statement.vars
     elif predicate == "dist":
-        return ("dist({}, {}) - {}".format(*statement.vars))
+        return "assert", ("dist({}, {}) - {}".format(*statement.vars))
     elif predicate == "known":
         for var in statement.vars:
             assert(var in known_symbols)
@@ -365,11 +365,10 @@ def produce_assert_helper(statement, known_symbols):
         # TODO: Should I do something here?
         return
     elif predicate == "notin":
-        # TODO: Implement (not as an assertion rule but a notIn rule)
-        return
+        # TODO: Implement according to Shira's format
+        return "not_in", statement.vars
     elif predicate == "neq":
-        # TODO: Implement this (not as an assertion rule)
-        return
+        return "not_equal", statement.vars
     elif predicate == "output":
         return
     elif predicate.startswith("make"):
@@ -384,6 +383,9 @@ class PartialProg:
     def __init__(self):
         self.known = {}
         self.rules = []
+        self.not_equal_rules = []
+        self.not_in_rules = []
+        self.not_colinear = []
 
     def _help_produce_rule(self, locus_name):
         # TODO: this shouldnt be a part of the partialProgram object
@@ -437,35 +439,48 @@ class PartialProg:
     def produce_known(self, symbols):
         self.known = symbols
         
-    def produce_assert(self, statements, *args, **kwargs):
+    def produce_constraint(self, statements, *args, **kwargs):
         """
-        This function decides the format of the assertion rule
+        This function decides the format of the different constraint rules.
         The helper function calculates the expression to evaluate
         statements: list of ready statements
         """
         assert_rules = ""
         for s in statements:
-            res = produce_assert_helper(s, *args, **kwargs)
+            res = produce_constraint_helper(s, *args, **kwargs)
             # Notice res might be none (which means we dont need an assertion rule for that statement)
             if res:
-                res = "abs({})".format(res)
-                if assert_rules != "":
-                    # This  isn't the first assert
-                    assert_rules += " + " + res
-                else:
-                    assert_rules = res
+                rule_type, rule = res
+                if rule_type == "assert":
+                    rule = "abs({})".format(rule)
+                    if assert_rules != "":
+                        # This  isn't the first assert
+                        assert_rules += " + " + rule
+                    else:
+                        assert_rules = rule
+                elif rule_type == "not_equal":
+                    self.not_equal_rules.append(rule)
+                elif rule_type == "not_in":
+                    self.not_in_rules.append(rule)
+                elif rule_type == "not_colinear":
+                    self.not_colinear.append(rule)
         if assert_rules == "":
             return
         self.rules.append(["assert", assert_rules])
 
 
     def __str__(self):
-        #return "known = {}\nrules = {}".format(str(self.known), str(self.rules))
         out_str = "known = {}\n".format(str(self.known))
         out_str += "[\n"
         for rule in  self.rules:
             out_str += "\t{}\n".format(rule)
-        out_str += "]"
+        out_str += "]\n"
+        out_str += "not equal: "
+        out_str += str(self.not_equal_rules) + "\n"
+        out_str += "not in: "
+        out_str += str(self.not_in_rules) + "\n"
+        out_str += "not colinear: "
+        out_str += str(self.not_colinear) + "\n"
         return out_str
     
 # The function  emits a known fact for the best var possible, in order to run the deductive part again
@@ -524,7 +539,7 @@ def add_assertion_rules(partial_prog, exercise, statements, known_symbols):
             ready_statements.append(s)
 
     # Add assert to relevant statements
-    partial_prog.produce_assert(
+    partial_prog.produce_constraint(
                 statements=ready_statements,
                 known_symbols=exercise.known_symbols)
     
