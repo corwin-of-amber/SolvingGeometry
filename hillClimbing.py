@@ -12,6 +12,17 @@ global_not_equal = []
 global_not_in = []
 global_not_collinear = []
 
+def circleCenter(c):
+    return c.center
+
+def circleFromDiameter(s):
+    return Circle(s.midpoint, s.length)
+
+def middle1(p1, p3):
+    return 2*p3 - p1
+
+def middle(p1, p2):
+    return (p1+p2)/2
 
 def vecOpNegate(vec):
     return Point(-vec.x, -vec.y)
@@ -208,6 +219,10 @@ PRIMITIVES = {
     "vecFrom2Points": vecFrom2Points,
     "angleCcw": angleCcw,
     "intersection": intersection,
+    "circleCenter": circleCenter,
+    "circleFromDiameter": circleFromDiameter,
+    "middle": middle,
+    "middle1": middle1
 }
 
 
