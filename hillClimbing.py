@@ -11,6 +11,7 @@ global_rules = []
 global_not_equal = []
 global_not_in = []
 global_not_collinear = []
+global_not_intersect_2_segments = []
 
 def circleCenter(c):
     return c.center
@@ -143,6 +144,41 @@ def handle_not_collinear(current_known, main_var, intersection_res):
     return None
 
 
+def handle_not_intersect_2_segments(current_known, main_var, intersection_res):
+    for stmnt in global_not_intersect_2_segments:
+        if main_var in stmnt:
+            all_known = True
+            for var in stmnt:
+                if var not in current_known and var != main_var:
+                    all_known = False
+                    break
+            if not all_known:
+                continue
+            points_list_0 = []
+            points_list_1 = []
+            for item in stmnt:
+                if item in current_known:
+                    points_list_0.append(current_known[item])
+                    points_list_1.append(current_known[item])
+                else: # var == main_var
+                    points_list_0.append(intersection_res[0])
+                    points_list_1.append(intersection_res[1])
+
+            s1 = Segment(points_list_0[0], points_list_0[1])
+            s2 = Segment(points_list_0[2], points_list_0[3])
+            intersection_0 = intersection(s1,s2)
+
+            s3 = Segment(points_list_1[0], points_list_1[1])
+            s4 = Segment(points_list_1[2], points_list_1[3])
+            intersection_1 = intersection(s3, s4)
+
+            if len(intersection_0) > 0 and len(intersection_1) == 0:
+                return 1
+            if len(intersection_1) > 0 and len(intersection_0) == 0:
+                return 0
+    return None
+
+
 
 def solveHillClimbing(rule_index, known):
     rule = global_rules[rule_index]
@@ -193,6 +229,10 @@ def solveHillClimbing(rule_index, known):
             if not_collinear_res is not None:
                 current_known[rule[1]] = intersection_res[not_collinear_res]
                 return solveHillClimbing(current_index, current_known)
+            not_intersect_2_segments_res = handle_not_intersect_2_segments(current_known, rule[1], intersection_res)
+            if not_intersect_2_segments_res is not None:
+                current_known[rule[1]] = intersection_res[not_intersect_2_segments_res]
+                return solveHillClimbing(current_index, current_known)
 
             current_known[rule[1]] = intersection_res[0]
             res1, known1 = solveHillClimbing(current_index, current_known)
@@ -226,11 +266,12 @@ PRIMITIVES = {
 }
 
 
-def hillClimbing(known, rules, not_equal, not_in, not_collinear):
-    global global_rules, global_not_equal, global_not_in, global_not_collinear
+def hillClimbing(known, rules, not_equal, not_in, not_collinear, not_intersect_2_segments):
+    global global_rules, global_not_equal, global_not_in, global_not_collinear, global_not_intersect_2_segments
     global_not_equal = not_equal
     global_not_in = not_in
     global_not_collinear = not_collinear
+    global_not_intersect_2_segments = not_intersect_2_segments
     for rule in rules:
         if rule[0] == ":in" or rule[0] == ":=":
             global_rules.insert(0,rule)
