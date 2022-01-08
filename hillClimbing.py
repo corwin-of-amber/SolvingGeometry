@@ -144,6 +144,7 @@ def solveHillClimbing(rule_index, known):
         current_known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
         return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
+        print("in dimension 1")
         domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
         def objfunc(p):
             # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
@@ -157,10 +158,12 @@ def solveHillClimbing(rule_index, known):
         return solution.fun, current_known
 
     else: #dimension == 0
+        print("in dimension 0")
         eval_res_list = []
         for i in range(len(rule[2])):
             eval_res_list.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
         intersection_res = intersection(*eval_res_list)
+        print("with p = ", intersection_res)
         if len(intersection_res) == 0:
             return float('inf'), current_known
         if len(intersection_res) == 1:
@@ -168,16 +171,16 @@ def solveHillClimbing(rule_index, known):
             return solveHillClimbing(current_index, current_known)
         else:
             not_equal_res = handle_not_equal(current_known, rule[1], intersection_res)
-            if not_equal_res:
+            if not_equal_res is not None:
                 current_known[rule[1]] = intersection_res[not_equal_res]
                 return solveHillClimbing(current_index, current_known)
             not_in_res = handle_not_in(current_known, rule[1], intersection_res)
-            if not_in_res:
-                current_known[rule[1]] = intersection_res[not_equal_res]
+            if not_in_res is not None:
+                current_known[rule[1]] = intersection_res[not_in_res]
                 return solveHillClimbing(current_index, current_known)
             not_collinear_res = handle_not_collinear(current_known, rule[1], intersection_res)
-            if not_collinear_res:
-                current_known[rule[1]] = intersection_res[not_equal_res]
+            if not_collinear_res is not None:
+                current_known[rule[1]] = intersection_res[not_collinear_res]
                 return solveHillClimbing(current_index, current_known)
 
             current_known[rule[1]] = intersection_res[0]
