@@ -145,24 +145,19 @@ def handle_not_collinear(current_known, main_var, intersection_res):
 
 
 def solveHillClimbing(rule_index, known):
-    print("**********************************************")
     rule = global_rules[rule_index]
-    print(rule, global_rules[rule_index:], known)
     current_known = copy.deepcopy(known)
     if rule_index == 0: #assert with only 0-dimensions
-        print("in assert")
         eval_value = abs(eval(rule[1], {**PRIMITIVES, **current_known}))
         return eval_value, current_known
     current_index = rule_index - 1
     if rule[0] == ":=":
-        print("in :=")
         current_known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
         return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
         print("in dimension 1")
         domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
         def objfunc(p):
-            print("in objfunc with p=", p, "-->")
             # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
             known_dup = known
             known_dup[rule[1]] = p

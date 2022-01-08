@@ -10,7 +10,7 @@ import os
 import shutil
 import re
 import csv
-from sympy import Point
+from sympy import Point, pi
 from utils import deg_to_rad, is_number
 # Notice: should download sympy
 #from sympy.geometry import Point, Circle, Line, intersection
@@ -22,6 +22,7 @@ class Exercise:
         self.dl_file = None
         self.output_vars = []
         self.known_symbols = {}
+        self.other_vars = [] # Here are the rest of the vars (that arent known or required as output)
 
     def build_exercise_from_statements(self, statements):
         self._write_dl(statements)
@@ -34,10 +35,19 @@ class Exercise:
                 assert(var_name not in self.known_symbols)
                 assert(var_name not in self.output_vars)
                 self.known_symbols[var_name] = var_val
+                if var_name in self.other_vars:
+                    self.other_vars.remove(var_name)
             elif s.predicate == "output":
                 assert(len(s.vars) == 1)
-                assert(s.vars[0] not in self.known_symbols)
-                self.output_vars.append(s.vars[0])
+                var = s.vars[0]
+                assert(var not in self.known_symbols)
+                self.output_vars.append(var)
+                if var in self.other_vars:
+                    self.other_vars.remove(var)
+            else:
+                for var in s.vars:
+                    if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars:
+                        self.other_vars.append(var)
 
     def _write_dl(self, statements):
         # Create dl file inside souffle_in_dir folder
@@ -53,7 +63,7 @@ class Exercise:
                 f.write(predicate + "(\"" + s.vars[0] + "\").\n")
             elif s.predicate == "rightAngle":
                 f.write("Angle(\"{}\", \"{}\", \"{}\", \"90\").\n".format(s.vars[0], s.vars[1], s.vars[2]))
-            elif (s.predicate == "neq") or (s.predicate == "output"):
+            elif (s.predicate == "notIn") or (s.predicate == "neq") or (s.predicate == "output"):
                 # neq shouldnt be in dl file (only as assert)
                 pass
             else:
@@ -73,8 +83,9 @@ SAMPLES = {"triangle": [["Y"], {"X": Point(0, 0), "Z":Point(1, 0), "d": 1}],
         "myTriangle": [["W", "Y"], {"X": Point(0, 0), "Z":Point(1, 0), "Dist": 1}],
         "square": [["C", "D"], {"A":Point(0,0), "B":Point(1, 0)}],
         "square2": [["C"], {"A":Point(0,0), "B":Point(1, 0), "d": 1}],
-        "pentagon": [["B", "D", "E"], {"A":Point(0, 0),  "C": Point(1, 0), "a":deg_to_rad(120),  "d": 1}],
-        "9gon": [["C", "D", "E", "F", "G", "H", "I"], {"A":Point(0, 0),  "B": Point(1, 0), "d": 1}]
+        "pentagon": [["B", "D", "E"], {"A":Point(0, 0),  "C": Point(1, 0)}],
+        "pentagon2": [["B", "D", "E"], {"A":Point(0, 0),  "C": Point(1, 0), "a":deg_to_rad(120),  "d": 1}],
+        "9gon": [["C", "D", "E", "F", "G", "H", "I"], {"A":Point(0, 0),  "B": Point(1, 0)}]
         }
 
 
@@ -143,8 +154,8 @@ class Relation:
                                 should_mark_is_new=False)
             self._write_facts_helper(out_rel_name="In",
                                 generate_row_to_write=lambda fact:[fact.params[1], fact.id])
-        if self.name.startswith("Apply"):
-            # For apply relation - dont use id
+        elif self.name.startswith("Apply") or (self.name == "Known"):
+            # For apply and known relations - dont use id
             self._write_facts_helper(out_rel_name=self.name,
                                 generate_row_to_write=lambda fact:fact.params)
         else:
@@ -168,33 +179,46 @@ class Fact:
         self.is_new = is_new
         self.id = self.relation.name.lower() + str(len(self.relation.facts) + 1)
         
+    def  __str__(self):
+        tmp =  self.relation.name +  "("
+        for p in self.params:
+            tmp += p + ", "
+        return  tmp + ")"
+    
     def __eq__(self, other):
         return (self.params == other.params) and (self.relation.name == self.relation.name)
 
 relations = {
-                "Circle": Relation("Circle", is_make_relation=True),
-                "Intersection": Relation("Intersection", is_make_relation=True, should_delete_symmetry=True),
-                "Line": Relation("Line", is_make_relation=True),
-                "Raythru": Relation("Raythru", is_make_relation=True),
-                "Minus": Relation("Minus", is_make_relation=True),
-                "Known": Relation("Known", is_make_relation=True),
-                # Apply relations are here to prevent from  applying rules that are already known
-                "Apply1": Relation("Apply1", is_make_relation=True),
-                "Apply2": Relation("Apply2", is_make_relation=True),
-                "Apply3": Relation("Apply3", is_make_relation=True)
-                
+        "Circle": Relation("Circle", is_make_relation=True),
+        "PerpBisect":Relation("PerpBisect", is_make_relation=True, should_delete_symmetry=True),
+        "Intersection": Relation("Intersection", is_make_relation=True, should_delete_symmetry=True),
+        "Line": Relation("Line", is_make_relation=True),
+        "Raythru": Relation("Raythru", is_make_relation=True),
+        "ExtendRay": Relation("ExtendRay", is_make_relation=True),
+        "Minus": Relation("Minus", is_make_relation=True),
+        "Known": Relation("Known", is_make_relation=True),
+        # Apply relations are here to prevent from  applying rules that are already known
+        "Apply1": Relation("Apply1", is_make_relation=True),
+        "Apply2": Relation("Apply2", is_make_relation=True),
+        "Apply3": Relation("Apply3", is_make_relation=True)                
             }
 # These are relations that has "make" relations (to help create their data)
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
 
 def run_souffle(souffle_script):
-    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
+    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(
+    souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
 # Functions to parse the results of the deduction
 def find_all_locations(obj_id):
     # Get an object id, parse datalog output and return list of locations it's in
     loci = []
-    f = open(os.path.join(souffle_out_dir, "In.csv"), "r")
+    try:
+        f = open(os.path.join(souffle_out_dir, "In.csv"), "r")
+    except FileNotFoundError as e:
+        print("ERROR: file wasn't found, probably a mistake in the dl file")
+        print()
+        raise e
     csv_reader = csv.reader(f, delimiter="\t")
     for row in csv_reader:
         obj, locus_id = row
@@ -289,9 +313,9 @@ def get_locus_type_from_name(locus_name):
     return locations[locus_type]
     return locus_type
 
-# The function gets a locus name, and find the predicate that made the locus known (usiing the apply relation).
-# The function returns the predicate and its params
-def get_predicate(locus_name):
+# The function gets a known locus name, and find the reason it is known (using the apply relation).
+# The function returns the reason title and its params
+def get_reason(symbol_name):
     # TODO: Save this for each iteration instead of calculating  from scratch
     # Find locus name inside the apply relation files, and return the relevant predicate
     for i in range(MIN_APPLY, MAX_APPLY + 1):
@@ -299,7 +323,7 @@ def get_predicate(locus_name):
         f = open(os.path.join(souffle_out_dir, "Apply" + str(i) + ".facts"), "r")
         csv_reader = csv.reader(f, delimiter="\t")
         for row in csv_reader:
-            if (row[0] == locus_name):
+            if (row[0] == symbol_name):
                 f.close()
                 return row[1], row[2:]
                 
@@ -327,19 +351,7 @@ def produce_assert_helper(statement, known_symbols, output_vars):
     # Notice this function can return None for certain predicates
     # TODO: Define an api for the synthesis module
     predicate = statement.predicate.lower()
-    if predicate == "dist":
-        return ("dist({}, {}) - {}".format(*statement.vars))
-    elif predicate == "known":
-        for var in statement.vars:
-            assert(var in known_symbols)
-        # In this case there isn't an assertion error
-        return
-    elif predicate == "output":
-        return
-    elif predicate == "makeline":
-        return
-    elif predicate == "neq":
-        # TODO: Implement this
+    if predicate == "segment":
         return
     elif predicate == "rightangle":
         return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
@@ -348,41 +360,82 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         # Notice there shouldnt be an angle in degrees here
         assert(not is_number(statement.vars[3]))
         return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
+    elif predicate == "notcolinear":
+        # TODO: Put something here the numeric part will be able  to handle
+        return  "notColinear({}, {}, {})".format(*statement.vars)        
+    elif predicate == "dist":
+        return ("dist({}, {}) - {}".format(*statement.vars))
+    elif predicate == "known":
+        for var in statement.vars:
+            assert(var in known_symbols)
+        # In this case there isn't an assertion error
+        return
+    elif predicate == "in":
+        # TODO: Should I do something here?
+        return
+    elif predicate == "notin":
+        # TODO: Put something here the numeric part will be able  to handle
+        return  "notIn({}, {})".format(*statement.vars)
+    elif predicate == "neq":
+        # TODO: Implement this
+        return
+    elif predicate == "output":
+        return
+    elif predicate.startswith("make"):
+        return
     else:
         raise NotImplementedError("predicate {} isn't implemented".format(predicate))
 
-
 class PartialProg:
+    """
+    Holds the output from the deduction procedure.
+    """
     def __init__(self):
         self.known = {}
         self.rules = []
 
     def _help_produce_rule(self, locus_name):
-        # Problem: Apply for already known facts
-        predicate_name, params = get_predicate(locus_name)
+        # TODO: this shouldnt be a part of the partialProgram object
+        reason_title, params = get_reason(locus_name)
         param_strings = []
         for param in params:
             if not is_leave(param):
                 param_strings.append(self._help_produce_rule(param))
             else:
                 param_strings.append(param)
-        if predicate_name == "intersection":
-            return [self._help_produce_rule(params[0]), self._help_produce_rule(params[1])]
-        if predicate_name == "orth":
+        if reason_title == "intersection":
+            return param_strings
+        if reason_title == "orth":
             return "rotateCcw({}, pi)".format(param_strings[0])
+        if reason_title == "perp_bisect-0":
+            # This hack will work,  but it doesnt actually create a tree
+            middle_point = "({} + {}) / 2".format(param_strings[0], param_strings[1])
+            #vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
+            vec = "rotateCcw(vecFrom2Points({}, {}), pi)".format(param_strings[0], param_strings[1])
+            return 'linevec(({}), ({}))'.format(middle_point, vec)
         if len(param_strings) == 1:
-            return '{}({})'.format(predicate_name, *param_strings)
+            return '{}({})'.format(reason_title, *param_strings)
         if len(param_strings) == 2:
-            return '{}({}, {})'.format(predicate_name, *param_strings)
+            return '{}({}, {})'.format(reason_title, *param_strings)
         if len(param_strings) == 3:
-            return '{}({}, {}, {})'.format(predicate_name, *param_strings)
+            return '{}({}, {}, {})'.format(reason_title, *param_strings)
         raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
+    def produce_equal_rule(self, var_name):
+        # TODO: After handling numbers in front - remove is_number checkings from here
+        # Notice this is only true since we check is_number when deciding a statement is ready
+        if (is_number(var_name)):
+            return
+        val = self._help_produce_rule(var_name)
+        self.rules.append([":=", var_name, val])
+        
     def produce_in_rule(self, var, locus_name, dim):
+        # This function  adds an in rule. It creates it as a tree of predicates
         locus_list = self._help_produce_rule(locus_name)
         if type(locus_list) != list:
             locus_list = [locus_list]
         self.rules.append([":in", var, locus_list])
+        
     def produce_known(self, symbols):
         self.known = symbols
         
@@ -392,6 +445,7 @@ class PartialProg:
         # statements: list of ready statements
         # var: name of the var we searched for in this assert
         assert_rules = ""
+        # TODO: remove var from rule
         for s in statements:
             res = produce_assert_helper(s, *args, **kwargs)
             # Notice res might be none (which means we dont need an assertion rule for that statement)
@@ -465,10 +519,20 @@ def deductive_synthesis_iteration(souffle_script):
             if rel.make():
                 is_new_object = True
 
+# The function returns all the symbols in Known relation in the datalog but the output vars
+# Notice this doesnt return symbols that were known by input
+def get_known_symbols():
+    known = []
+    for fact in relations["Known"].facts:
+        assert(len(fact.params) == 1)
+        known.append(fact.params[0])
+    return known
+
 # The function create the partial program for the numeric search algorithm
 # TODO: improve assertion rules - seperate them for each var and make sure we add them in the right time
 def deductive_synthesis(exercise, partial_prog, statements):
-    output_vars = exercise.output_vars.copy()
+    # TODO: Should still distinguish between required out to others in checking if we are done
+    output_vars = exercise.output_vars.copy() + exercise.other_vars.copy()
     # Create a copy of all known symbols names
     known_symbols = list(exercise.known_symbols.keys())
     is_done = False
@@ -477,6 +541,12 @@ def deductive_synthesis(exercise, partial_prog, statements):
 
     while not is_done:
         deductive_synthesis_iteration(souffle_script=exercise.dl_file)
+        for var in output_vars:
+            # TODO:  Save known to a list to make it more  efficient (or seperate all to function)
+            if var in get_known_symbols():
+                partial_prog.produce_equal_rule(var)
+                output_vars.remove(var)
+                known_symbols.append(var)
         locus_per_var = best_known_locus_for_each_var(output_vars)
         var, locus, dim = get_best_output_var(output_vars, locus_per_var)
         if not var:
@@ -488,6 +558,7 @@ def deductive_synthesis(exercise, partial_prog, statements):
                         known_symbols=known_symbols,
                         var=var)
         # A new var is known - add relevant assertion rules
+        
         cur_statements = []
         for s in statements:
             if s.is_ready(known_symbols):
@@ -579,7 +650,7 @@ if __name__ == "__main__":
     # Basiccaly everything here shouldn't happen when running the whole program (the input should come from the front and the output should go to the numeric search
 
     # This is an example of useing synthesis straight from dl file
-    exercise_name = "square2"
+    exercise_name = "pentagon"
     souffle_script = os.path.join("tmpInput", exercise_name + ".dl")
     exercise = Exercise(exercise_name)
     exercise.build_exercise_from_dl(
@@ -589,5 +660,5 @@ if __name__ == "__main__":
                     )
     #output_vars = parse_spec() # Currentlhy parse spec only gives the output variables
     print("Partial program is: ")
-    partial_prog = main(exercise, write_output_to_file=True) # Note this will produce no assertion rules
+    partial_prog = main(exercise=exercise, write_output_to_file=True) # Note this will produce no assertion rules
     print(partial_prog)
