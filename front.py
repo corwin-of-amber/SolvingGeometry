@@ -10,18 +10,16 @@ SAMPLES = {
                 "dist(Z,Y)=136",
                 "X!=Z",
                 "Z=Point(136,0)",
-                "136=136",
                         "?(Y)"],
     "myTriangle": ["?(W)",
                     "?(Y)",
                     "X=Point(0, 0)",
                     "Z=Point(1, 0)",
-                    "Dist=1",
                     "W!=X",
-                    "dist(X,Y)=Dist",
-                    "dist(Z,Y)=Dist",
-                    "dist(W,Y)=Dist",
-                    "dist(Z,W)=Dist"
+                    "dist(X,Y)=1",
+                    "dist(Z,Y)=1",
+                    "dist(W,Y)=1",
+                    "dist(Z,W)=1"
                     ],
     "square": ["dist(A,B)=d",
                "dist(B,C)=d",
@@ -38,14 +36,13 @@ SAMPLES = {
     ],
     "square2": [#"MakeLine(A, B)",
                 #"MakeLine(B, C)",
-                "dist(A,B)=d",
-                "dist(B,C)=d",
-                "dist(C,D)=d",
+                "dist(A,B)=1",
+                "dist(B,C)=1",
+                "dist(C,D)=1",
                 "angle(A,B,C)=90",
                 "A=Point(0,0)",
                 "B=Point(1,0)",
-                "d=1",
-                "?(C)"
+                "?(C)", "?(D)"
     ],
     "pentagon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
                 "dist(D,E)=d", "dist(E,A)=d",
@@ -58,18 +55,16 @@ SAMPLES = {
                 "D!=A", "A!=C",
                 "A=Point(0, 0)", "C=Point(1,0)",
                 "?(B)", "?(D)", "?(E)"],
-    "pentagon2": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
-                "dist(D,E)=d", "dist(E,A)=d",
-                "angleCcw(A,B,C)=a", "angleCcw(B,C,D)=a",
-                "angleCcw(C,D,E)=a", "angleCcw(D,E,A)=a",
-                "angleCcw(E,A,B)=a",
+    "pentagon2": ["dist(A,B)=1", "dist(B,C)=1", "dist(C,D)=1",
+                "dist(D,E)=1", "dist(E,A)=1",
+                "angleCcw(A,B,C)=108", "angleCcw(B,C,D)=108",
+                "angleCcw(C,D,E)=108", "angleCcw(D,E,A)=108",
+                "angleCcw(E,A,B)=108",
                 # TODO: Implement intersect2segmentsQ, realnot
                 #"intersect2segmentsQ(A,B,C,D,q)",
                 #"realnot(q)",
                 "D!=A", "A!=C",
                 "A=Point(0, 0)", "C=Point(1,0)",
-                "a=120", # TODO: Should make this interface better for the user
-                "d=1",
                 "?(B)", "?(D)", "?(E)"],
     "9gon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
             "dist(D,E)=d", "dist(E,F)=d", "dist(F,G)=d",
@@ -124,11 +119,14 @@ SAMPLES = {
             "A!=D",
             "A=Point(2,2)","B=Point(0,0)",
             "?(C)", "?(D)", "?(E)", "?(F)"],
-     'SAT:angles-1': ["dist(O,A,100) & dist(O,R,100) & [!=](O,B) & [!=](O,L)",
-                 "angle_ccw(B,O,A,40)",
-                 "angle_ccw(R,O,L, 25)",
-                 "middle(L,A,O) & middle(K,B,O)",
-                 "known(O) & known(B) & [?](A,R,L,K)"],
+     'SAT:angles-1': [
+            "dist(O,A,100)", "dist(O,R,100)",
+            "O!=B", "O!=L",
+            "angleCcw(B,O,A,40)", "angleCcw(R,O,L,25)",
+             "middle(L,A,O)", "middle(K,B,O)",
+             "O=Point(0,0)", "B=Point(10, 0)",
+             #TODO: Make known an option"known(O)", "known(B)", 
+             "?(A)", "?(R)", "?(L)", "?(K)"]
     }
 # User writes: 
 # dist(A,B) = 10
@@ -157,13 +155,10 @@ class Statement:
         for var in self.vars:
             # TODO: Shouldnt use this condition
             assert(type(var) == str)
-            if is_number(var):
-                continue
             if var not in known:
                 return False
         return True
     
-    # This is just for convenience
     def __str__(self):
         return "{}{}".format(self.predicate, self.vars)
         
@@ -188,26 +183,35 @@ def parse_dl(input_file):
         statements.append(Statement(predicate, vars))
     return statements
     
-POSSIBLE_PREDICATES = ["segment",  "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "neq", "output"]
+# A dict of the form num: var_name, that represents numbers we converted to variable.
+numbers = {}
+
+def get_number_as_var(num):
+    if num in numbers:
+        return numbers[num]
+    else:
+        new_var = "num_" + str(len(numbers))
+        numbers[num] = new_var
+        return new_var
+
+    
+POSSIBLE_PREDICATES = ["segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "neq", "output"]
 
 # Api for Statement
 # All functions gets strings as parameters
-
 def segment(a, b, name_of_segment):
     return Statement("Segment", vars=[a, b, name_of_segment])
 
+def middle(a, b, c):
+    return Statement("Middle", vars=[a, b, c])
+
 def _angle_helper(angle_name, a,  b, c, angle_val):
-    s = [
-        #Statement("MakeLine", vars=[a, b]),
-        #Statement("MakeLine", vars=[b, c])
-        #Statement("makeRaythru", vars=[b, a]),
-        #Statement("makeRaythru", vars=[b, c])
-        ]
+    s = []
     if angle_val == "90":
         s.append(Statement("rightAngle", vars=[a, b, c]))
         return s
     if is_number(angle_val):
-        angle_val = deg_to_rad(angle_val)
+        angle_val = get_number_as_var(deg_to_rad(angle_val))
     s.append(Statement(angle_name,
                         vars=[
                                 a, b, c, angle_val
@@ -227,7 +231,10 @@ def notColinear(a, b, c):
     return Statement("notColinear", vars=[a, b, c])
         
 def dist(p1, p2, dist_p1_p2):
-    return Statement("dist", vars=[p1, p2, dist_p1_p2])
+    if is_number(dist_p1_p2):
+        dist_p1_p2 = get_number_as_var(dist_p1_p2)
+    s = [Statement("dist", vars=[p1, p2, dist_p1_p2])]
+    return s
 
 # Notice this is a patch - because in cant be a name for a function
 def in_func(a, domain):
@@ -310,6 +317,10 @@ def parse_free_text(lines):
             statements += new_statements
         else:
             statements.append(new_statements)
+    
+    # Add variables that were casted from numbers as Known statements
+    for numeric_val, var_name in numbers.items():
+        statements.append(known(var_name, numeric_val))
     return statements
 
 def main(exercise_name=None):

@@ -11,7 +11,7 @@ import shutil
 import re
 import csv
 from sympy import Point, pi
-from utils import deg_to_rad, is_number
+from utils import deg_to_rad
 # Notice: should download sympy
 #from sympy.geometry import Point, Circle, Line, intersection
 
@@ -195,6 +195,7 @@ relations = {
         "Line": Relation("Line", is_make_relation=True),
         "Raythru": Relation("Raythru", is_make_relation=True),
         "ExtendRay": Relation("ExtendRay", is_make_relation=True),
+        "Linethru": Relation("Linethru", is_make_relation=True),
         "Minus": Relation("Minus", is_make_relation=True),
         "Known": Relation("Known", is_make_relation=True),
         # Apply relations are here to prevent from  applying rules that are already known
@@ -255,11 +256,11 @@ def get_best_known_locus(loci):
     if locus_from_dim1:
         return locus_from_dim1, best_dim
 
-# The function gets all output vars, finds best locus for each one and return a dict that saves it
+# The function gets all unknown vars, finds best locus for each one and return a dict that saves it
 # Dict structure: locus_per_var = {var:(best_locus, best_dim)}
-def best_known_locus_for_each_var(output_vars):
+def best_known_locus_for_each_var(vars):
     locus_per_var = {}
-    for var in output_vars:
+    for var in vars:
         loci = find_all_locations(var)
         res = get_best_known_locus(loci)
         if res:
@@ -270,8 +271,8 @@ def best_known_locus_for_each_var(output_vars):
             print("Couldn't find a locus for " + var)
     return locus_per_var
 
-def get_best_output_var(output_vars, locus_per_var):
-    # Get output vars and a dict with their best locations. return  the locus of the best one (lowest dimension locus)
+def get_best_output_var(locus_per_var):
+    # Get a dict with the best location for each unknown var. return  the locus of the best one (lowest dimension locus)
     overall_best_dim = None
     overall_best_var = None
     overall_best_locus = None
@@ -293,18 +294,6 @@ def is_search_completed(output_vars, locus_per_var):
         if locus_per_var[var][1] != 0:
             return False
     return True
-   
-"""    
-def find_fact_for_locus(locus_id, relation_name):
-    # Read from souffle.
-    # Question: is it enough to take rel.facts?
-    f = open(os.path.join(souffle_in_dir, relation_name + ".csv"), "r")
-    csv_reader = csv.reader(f, delimiter="\t")
-    for row in csv_reader:
-        # The locus id is always the last word in the row
-        if row[-1] == locus_id:
-            return  row
-""" 
 
 def get_locus_type_from_name(locus_name):
     locus_type = re.compile("(\D+)\d+").findall(locus_name)[0]
@@ -346,25 +335,27 @@ def is_leave(term):
         f.close()
     return True
 
-def produce_assert_helper(statement, known_symbols, output_vars):
+def produce_constraint_helper(statement, known_symbols):
     # Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
     # Notice this function can return None for certain predicates
-    # TODO: Define an api for the synthesis module
     predicate = statement.predicate.lower()
     if predicate == "segment":
         return
+    if predicate == "middle":
+        # This predicate will produe the rule: 
+        # dist(middle(A, B), O)
+        return ("dist(middle({}, {}), {})").format(*statement.vars)
     elif predicate == "rightangle":
-        return ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
+        return "assert", ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
     elif (predicate == "angle") or (predicate == "angleccw"):
         # angle means we dont care of its ccw or cw 
         # Notice there shouldnt be an angle in degrees here
-        assert(not is_number(statement.vars[3]))
-        return "angleCcw({}, {}, {}) - {}".format(*statement.vars)
+        return "assert", "angleCcw({}, {}, {}) - {}".format(*statement.vars)
     elif predicate == "notcolinear":
-        # TODO: Put something here the numeric part will be able  to handle
-        return  "notColinear({}, {}, {})".format(*statement.vars)        
+        # TODO: implement according to Shira's format
+        return "not_colinear", statement.vars
     elif predicate == "dist":
-        return ("dist({}, {}) - {}".format(*statement.vars))
+        return "assert", ("dist({}, {}) - {}".format(*statement.vars))
     elif predicate == "known":
         for var in statement.vars:
             assert(var in known_symbols)
@@ -374,11 +365,10 @@ def produce_assert_helper(statement, known_symbols, output_vars):
         # TODO: Should I do something here?
         return
     elif predicate == "notin":
-        # TODO: Put something here the numeric part will be able  to handle
-        return  "notIn({}, {})".format(*statement.vars)
+        # TODO: Implement according to Shira's format
+        return "not_in", statement.vars
     elif predicate == "neq":
-        # TODO: Implement this
-        return
+        return "not_equal", statement.vars
     elif predicate == "output":
         return
     elif predicate.startswith("make"):
@@ -393,6 +383,9 @@ class PartialProg:
     def __init__(self):
         self.known = {}
         self.rules = []
+        self.not_equal_rules = []
+        self.not_in_rules = []
+        self.not_colinear = []
 
     def _help_produce_rule(self, locus_name):
         # TODO: this shouldnt be a part of the partialProgram object
@@ -405,13 +398,22 @@ class PartialProg:
                 param_strings.append(param)
         if reason_title == "intersection":
             return param_strings
+        if reason_title == "middle-1":
+            return "vecFrom2Points(-{}, 2 * {})".format(param_strings[0], param_strings[1])
+        if reason_title == "circle-from-diameter":
+            return "circleFromDiameter({})".format(*param_strings)
+        if reason_title=="circle-center":
+            return "circleCenter({})".format(*param_strings)
+        if reason_title == "id-0":
+            # TODO: try to use this and make sure its fine
+            return "{}".format(param_strings[0])
         if reason_title == "orth":
-            return "rotateCcw({}, pi)".format(param_strings[0])
+            return "rotateCcw({}, pi/2)".format(param_strings[0])
         if reason_title == "perp_bisect-0":
             # This hack will work,  but it doesnt actually create a tree
-            middle_point = "({} + {}) / 2".format(param_strings[0], param_strings[1])
+            middle_point = "middle({}, {})".format(param_strings[0], param_strings[1])
             #vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
-            vec = "rotateCcw(vecFrom2Points({}, {}), pi)".format(param_strings[0], param_strings[1])
+            vec = "rotateCcw(vecFrom2Points({}, {}), pi/2)".format(param_strings[0], param_strings[1])
             return 'linevec(({}), ({}))'.format(middle_point, vec)
         if len(param_strings) == 1:
             return '{}({})'.format(reason_title, *param_strings)
@@ -422,10 +424,6 @@ class PartialProg:
         raise NotImplementedError("param strings len is: " + str(len(param_strings)))
         
     def produce_equal_rule(self, var_name):
-        # TODO: After handling numbers in front - remove is_number checkings from here
-        # Notice this is only true since we check is_number when deciding a statement is ready
-        if (is_number(var_name)):
-            return
         val = self._help_produce_rule(var_name)
         self.rules.append([":=", var_name, val])
         
@@ -439,73 +437,67 @@ class PartialProg:
     def produce_known(self, symbols):
         self.known = symbols
         
-    def produce_assert(self, var, statements, *args, **kwargs):
-        # This function decides the format of the assertion rule
-        # The helper function calculates the expression to evaluate
-        # statements: list of ready statements
-        # var: name of the var we searched for in this assert
+    def produce_constraint(self, statements, *args, **kwargs):
+        """
+        This function decides the format of the different constraint rules.
+        The helper function calculates the expression to evaluate
+        statements: list of ready statements
+        """
         assert_rules = ""
-        # TODO: remove var from rule
         for s in statements:
-            res = produce_assert_helper(s, *args, **kwargs)
+            res = produce_constraint_helper(s, *args, **kwargs)
             # Notice res might be none (which means we dont need an assertion rule for that statement)
             if res:
-                res = "abs({})".format(res)
-                if assert_rules != "":
-                    # This  isn't the first assert
-                    assert_rules += " + " + res
-                else:
-                    assert_rules = res
+                rule_type, rule = res
+                if rule_type == "assert":
+                    rule = "abs({})".format(rule)
+                    if assert_rules != "":
+                        # This  isn't the first assert
+                        assert_rules += " + " + rule
+                    else:
+                        assert_rules = rule
+                elif rule_type == "not_equal":
+                    self.not_equal_rules.append(rule)
+                elif rule_type == "not_in":
+                    self.not_in_rules.append(rule)
+                elif rule_type == "not_colinear":
+                    self.not_colinear.append(rule)
         if assert_rules == "":
             return
-        self.rules.append(["assert", var,  assert_rules])
+        self.rules.append(["assert", assert_rules])
 
 
     def __str__(self):
-        #return "known = {}\nrules = {}".format(str(self.known), str(self.rules))
         out_str = "known = {}\n".format(str(self.known))
         out_str += "[\n"
         for rule in  self.rules:
             out_str += "\t{}\n".format(rule)
-        out_str += "]"
+        out_str += "]\n"
+        out_str += "not equal: "
+        out_str += str(self.not_equal_rules) + "\n"
+        out_str += "not in: "
+        out_str += str(self.not_in_rules) + "\n"
+        out_str += "not colinear: "
+        out_str += str(self.not_colinear) + "\n"
         return out_str
-        
-    
-def get_geometric_locus(locus_id, symbols):
-    # Get a locus id and dict of symbols with their real values.
-    # Return  an object of the geometric location
-    locus = get_locus_type_from_name(locus_id)
-    locus_type = locus.name
-    # All the relavent locations are already in the facts list in memory
-    for fact in locus.facts:
-        if fact.id == locus_id:
-            # TODO: Should I check somewhere if the locus is  known?
-            if locus_type == "Circle":
-                point_name = fact.params[0]
-                radius_name = fact.params[1]
-                return Circle(Point(*symbols[point_name]), symbols[radius_name])
-                # Should somehow get real coordinates and distance
-                # Circle(point, radius)
-            if locus_type == "intersection":
-                locus1_name = fact.params[0]
-                locus2_name = fact.params[1]
-                return intersection(get_geometric_locus(locus1_name, symbols), get_geometric_locus(locus2_name, symbols))
-            if locus_type == "Line":
-                point1_name = facts.params[0]
-                point2_name = facts.params[1]
-                return Line(Point(*symbols[point1_name]), Point(*symbols[point2_name]))
-            return
-    raise AssertionError
     
 # The function  emits a known fact for the best var possible, in order to run the deductive part again
-def emit_known_fact(output_vars, known_symbols, var):
+def emit_known_fact(var):
     print("Emit: {} to known  facts".format(var))
     f = open(os.path.join(souffle_in_dir, "Known.facts"), "a")
     csv_writer = csv.writer(f, delimiter="\t")
     csv_writer.writerow([var])
     f.close()
+    
+# This function is called after making a var known. It removes it from the relevant list and appends to the known_symbols list
+def update_vars_state(output_vars, other_vars, known_symbols, var):
     # TODO: Notice remove is slow in python (perhaps there is an alternative)
-    output_vars.remove(var)
+    if var in output_vars:
+        output_vars.remove(var)
+    elif var in other_vars:
+        other_vars.remove(var)
+    else:
+        raise AssertionError("This shouldnt happen")
     known_symbols.append(var)
 
 def deductive_synthesis_iteration(souffle_script):
@@ -528,11 +520,34 @@ def get_known_symbols():
         known.append(fact.params[0])
     return known
 
+# The function gets all vars that are yet unknown, checks which one has become known  in  the last iteration, and returns a list of the new known vars
+def find_new_known_vars(vars):
+    new_known = []
+    known_symbols = get_known_symbols()
+    for var in vars:
+        if var in known_symbols:
+            new_known.append(var)
+    return new_known
+
+def add_assertion_rules(partial_prog, exercise, statements, known_symbols):
+    # Find statements that all their symbols are known
+    ready_statements = []
+    for s in statements:
+        if s.is_ready(known_symbols):
+            ready_statements.append(s)
+
+    # Add assert to relevant statements
+    partial_prog.produce_constraint(
+                statements=ready_statements,
+                known_symbols=exercise.known_symbols)
+    
+
 # The function create the partial program for the numeric search algorithm
 # TODO: improve assertion rules - seperate them for each var and make sure we add them in the right time
 def deductive_synthesis(exercise, partial_prog, statements):
-    # TODO: Should still distinguish between required out to others in checking if we are done
-    output_vars = exercise.output_vars.copy() + exercise.other_vars.copy()
+    output_vars = exercise.output_vars.copy()
+    # Distinguish between required out to others (Other vars may appear in the partial prog output, but they dont have to)
+    other_vars = exercise.other_vars.copy()
     # Create a copy of all known symbols names
     known_symbols = list(exercise.known_symbols.keys())
     is_done = False
@@ -540,36 +555,40 @@ def deductive_synthesis(exercise, partial_prog, statements):
     statements = [s for s in statements if ((s.predicate != "known") and (not s.is_ready(known_symbols)))]
 
     while not is_done:
+        new_known_vars = False
         deductive_synthesis_iteration(souffle_script=exercise.dl_file)
-        for var in output_vars:
-            # TODO:  Save known to a list to make it more  efficient (or seperate all to function)
-            if var in get_known_symbols():
-                partial_prog.produce_equal_rule(var)
-                output_vars.remove(var)
-                known_symbols.append(var)
-        locus_per_var = best_known_locus_for_each_var(output_vars)
-        var, locus, dim = get_best_output_var(output_vars, locus_per_var)
-        if not var:
+        vars = find_new_known_vars(output_vars + other_vars)
+        for var in vars:
+            partial_prog.produce_equal_rule(var)
+            update_vars_state(output_vars=output_vars,
+                    other_vars=other_vars,
+                    known_symbols=known_symbols,
+                    var=var)
+        if len(vars) > 0:
+            new_known_vars = True
+        locus_per_var = best_known_locus_for_each_var(output_vars + other_vars)
+        var, locus, dim = get_best_output_var(locus_per_var)
+        if var:
+            if dim == 1:
+                # Add assertion rules for previous known symbols
+                add_assertion_rules(
+                            partial_prog=partial_prog,
+                            exercise=exercise,
+                            statements=statements, known_symbols=known_symbols)
+                statements = [s for s in statements if not s.is_ready(known_symbols)]
+            new_known_vars = True
+            partial_prog.produce_in_rule(var, locus, dim)
+            emit_known_fact(var=var)
+            update_vars_state(output_vars=output_vars,
+                            other_vars=other_vars,
+                            known_symbols=known_symbols,
+                            var=var)
+        if not new_known_vars:
+            print("remaining output vars are: ")
+            for var in output_vars:
+                print(var)
             # In this case there is no way to progress
             raise AssertionError("Not found output var with known location")
-        partial_prog.produce_in_rule(var, locus, dim)
-        # Notice this function removes the var from output vars and add it to known symbols
-        emit_known_fact(output_vars=output_vars,
-                        known_symbols=known_symbols,
-                        var=var)
-        # A new var is known - add relevant assertion rules
-        
-        cur_statements = []
-        for s in statements:
-            if s.is_ready(known_symbols):
-                cur_statements.append(s)
-        
-        partial_prog.produce_assert(
-                    statements=cur_statements,
-                    var=var,
-                    known_symbols=exercise.known_symbols,
-                    output_vars=exercise.output_vars)
-        statements = [s for s in statements if not s.is_ready(known_symbols)]
 
         if is_search_completed(output_vars, locus_per_var):
             # Question: Should I always emit known facts for all vars with dimension 0?
@@ -577,9 +596,19 @@ def deductive_synthesis(exercise, partial_prog, statements):
             for var in output_vars:
                 locus, dim = locus_per_var[var]
                 partial_prog.produce_in_rule(var, locus, dim)
-            print("Search completed")
+                update_vars_state(output_vars=output_vars,
+                            other_vars=other_vars,
+                            known_symbols=known_symbols,
+                            var=var)
             is_done = True
 
+    # All output vars are known - produce rest of assertion rules
+    add_assertion_rules(
+                    partial_prog=partial_prog,
+                    exercise=exercise,
+                    statements=statements, known_symbols=known_symbols)
+    statements = [s for s in statements if not s.is_ready(known_symbols)]
+    print("Search completed")
     if statements:
         print("Note: the remaining statements")
         for s in statements:
@@ -615,7 +644,7 @@ def define_souffle_vars(exercise_name):
     souffle_out_dir = os.path.join(souffle_main_dir, exercise_name)
 
 
-def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=False):
+def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=True):
     # Must get either exercise or statements (or both if they match).
     # exercise_name is optional
     if exercise and exercise_name:
