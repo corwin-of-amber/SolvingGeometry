@@ -102,7 +102,6 @@
 // -- Circle --
 MakeCircle(a, d):- Dist(a, _, d).
 
-// TODO: Why is this correct?
 MakeKnown(c):-TypeOf("circle", c), Diameter(c, d), Known(d).
 MakeApply1(c, "circle-from-diameter", d):-!Known(c), TypeOf("circle", c), Diameter(c, d), Known(d).
 

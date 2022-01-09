@@ -413,7 +413,7 @@ class PartialProg:
             # This hack will work,  but it doesnt actually create a tree
             middle_point = "middle({}, {})".format(param_strings[0], param_strings[1])
             #vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
-            vec = "rotateCcw(vecFrom2Points({}, {}), pi/2)".format(param_strings[0], param_strings[1]) #TODO:  use orth here
+            vec = "rotateCcw(vecFrom2Points({}, {}), pi/2)".format(param_strings[0], param_strings[1])
             return 'linevec(({}), ({}))'.format(middle_point, vec)
         if len(param_strings) == 1:
             return '{}({})'.format(reason_title, *param_strings)
