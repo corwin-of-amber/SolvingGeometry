@@ -171,7 +171,7 @@ Vpar(ray, vec):-Minus(a, b, vec), Raythru(a, b, ray).
 Origin(ray, a),In(a, ray), In(b, ray):-Raythru(a, b, ray).
 
 MakeMinus(x, y):-TypeOf("ray", ray), In(x, ray), In(y, ray), x!=y.
-Vpar(ray, vec):-Minus(x, y, vec), TypeOf("ray", ray), In(x, ray), In(y, ray), x!=y.
+//Vpar(ray, vec):-Minus(x, y, vec), TypeOf("ray", ray), In(x, ray), In(y, ray), x!=y.
 
 MakeKnown(ray):-TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
 MakeApply2(ray, "rayvec", a, u):-!Known(ray),TypeOf("ray", ray), Origin(ray, a), Vpar(ray, u), Known(a), Known(u).
