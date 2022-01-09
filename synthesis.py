@@ -401,11 +401,9 @@ class PartialProg:
         if reason_title == "middle-1":
             return "vecFrom2Points(-{}, 2 * {})".format(param_strings[0], param_strings[1])
         if reason_title == "circle-from-diameter":
-            #return "circle-from-diameter({})".format(*param_strings)
-            raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
+            return "circleFromDiameter({})".format(*param_strings)
         if reason_title=="circle-center":
-            #return "circle-center({})".format(*param_strings)
-            raise NotImplementedError("reason title {} wasnt implemented yet".format(reason_title))
+            return "circleCenter({})".format(*param_strings)
         if reason_title == "id-0":
             # TODO: try to use this and make sure its fine
             return "{}".format(param_strings[0])
@@ -413,7 +411,7 @@ class PartialProg:
             return "rotateCcw({}, pi/2)".format(param_strings[0])
         if reason_title == "perp_bisect-0":
             # This hack will work,  but it doesnt actually create a tree
-            middle_point = "({} + {}) / 2".format(param_strings[0], param_strings[1])
+            middle_point = "middle({}, {})".format(param_strings[0], param_strings[1])
             #vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
             vec = "rotateCcw(vecFrom2Points({}, {}), pi/2)".format(param_strings[0], param_strings[1]) #TODO:  use orth here
             return 'linevec(({}), ({}))'.format(middle_point, vec)
