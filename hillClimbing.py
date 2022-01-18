@@ -54,6 +54,9 @@ def angleCcw(p1, p2, p3): #CCW - TODO make sure it is ok
     val = math.atan2(l1.y, l1.x) - math.atan2(l3.y, l3.x)
     return val if val > 0 else 2*pi + val
 
+def angleCw(p1, p2, p3): #CW
+    return 2*pi - angleCcw(p1, p2, p3)
+
 def ray_domain(r):
     return lambda t: r.points[0] + r.direction * t
 
@@ -258,6 +261,7 @@ PRIMITIVES = {
     "rotateCcw": rotateCcw,
     "vecFrom2Points": vecFrom2Points,
     "angleCcw": angleCcw,
+    "angleCw": angleCw,
     "intersection": intersection,
     "circleCenter": circleCenter,
     "circleFromDiameter": circleFromDiameter,
