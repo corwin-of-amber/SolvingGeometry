@@ -69,7 +69,7 @@
 .decl Intersection(locus1: symbol, locus2: symbol, id: symbol)
 .input Intersection
 
-//.decl SubsetOf(subset:symbol, superset:symbol)
+.decl SubsetOf(subset:symbol, superset:symbol)
 
 .decl In(point: symbol, locus: symbol)
 .input In
@@ -131,6 +131,8 @@ In(c, id):-PerpBisect(a, b, id), Dist(a, c, d), Dist(b, c, d).
 
 MakeRaythru(a, b):-!Raythru(a, b,_), In(__, ab), Segment(a, b, ab).
 In(c, ray):-In(c,ab), Segment(a, b, ab), Raythru(a, b, ray).
+// TODO: Is this the right way to approach this?
+SubsetOf(s, ray):-Segment(a, b, s), Raythru(a,b, ray).
 
 TypeOf("line", l):-PerpBisect(_, __, l).
 MakeKnown(l):-Known(a), Known(b), PerpBisect(a, b, l).
@@ -225,9 +227,8 @@ MakeApply2(z, "*", x, y):-!Known(z), Prod(x, y, z), Known(x), Known(y).
 MakeKnown(x):-x=y, Known(y).
 MakeApply1(x, "id-0",  y):-!Known(x), x=y, Known(y). //TODO: I dont think this can happen
 
-
-// Create intersections only between objects that aren't both from dimension 0
-MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !(Dimension(c1, 0); Dimension(c2, 0)).
+// Create intersections only between objects that aren't both from dimension 0 and aren't a subset of each other (notice intersection isn't a subset of anything due to technical reasons)
+MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2, !SubsetOf(c1, c2), !SubsetOf(c2, c1),!(Dimension(c1, 0); Dimension(c2, 0)).
 //MakeIntersection(c1, c2):-In(b, c1), In(b, c2), c1!=c2,!SubsetOf(c1,c2), !SubsetOf(c2, c1).
 //!(SubsetOf(l, c1); SubsetOf(l , c2)).
   

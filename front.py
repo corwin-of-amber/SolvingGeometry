@@ -53,7 +53,7 @@ SAMPLES = {
                 #"intersect2segmentsQ(A,B,C,D,q)",
                 #"realnot(q)",
                 "D!=A", "A!=C",
-                "A=Point(0, 0)", "C=Point(1,0)",
+                "A=Point(0, 0)", "C=Point(2,0)",
                 "?(B)", "?(D)", "?(E)"],
     "pentagon2": ["d=1.23606",
                 "dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
@@ -78,7 +78,7 @@ SAMPLES = {
             "?(C)", "?(D)", "?(E)", "?(F)", "?(G)", "?(H)", "?(I)"
             #realont(q1), realnot(q2), intersect_2_segments
             ],
-    'square-in-square':
+    "square-in-square":
           ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d", "dist(D,A)=d", "A!=B", "A!=C", "B!=D",
            "angleCcw(A,D,C)=90",
            "segment(A,B,AB)","in(E,AB)", "dist(A,E)=15",
@@ -88,10 +88,10 @@ SAMPLES = {
            "angle(E,F,G)=90",
            "angle(F,G,H)=90",
            "angle(G,H,E)=90",
-           "A=Point(0,0)", "B=Point(1,0)","?(C)", "?(D)"
+           "A=Point(0,0)", "B=Point(20,0)","?(C)", "?(D)"
            "?(E)", "?(F)", "?(G)", "?(H)"
            ],
-   'square-in-triangle':
+   "square-in-triangle":
             ["A=Point(0,0)", "B=Point(2,0)",
             "C=Point(1,1)",
              "segment(A,B,AB)", "in(D,AB)",
