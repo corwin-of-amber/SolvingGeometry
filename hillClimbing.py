@@ -51,8 +51,11 @@ def dist(p1, p2):
 def angleCcw(p1, p2, p3): #CCW - TODO make sure it is ok
     l1 = Point(p1.x-p2.x,p1.y-p2.y)
     l3 = Point(p3.x-p2.x,p3.y-p2.y)
-    val = math.atan2(l1.y, l1.x) - math.atan2(l3.y, l3.x)
+    val = math.atan2(l3.y, l3.x) - math.atan2(l1.y, l1.x)
     return val if val > 0 else 2*pi + val
+
+def angleCw(p1, p2, p3): #CW
+    return 2*pi - angleCcw(p1, p2, p3)
 
 def ray_domain(r):
     return lambda t: r.points[0] + r.direction * t
@@ -184,6 +187,7 @@ def solveHillClimbing(rule_index, known):
     rule = global_rules[rule_index]
     current_known = copy.deepcopy(known)
     if rule_index == 0: #assert with only 0-dimensions
+        print("in assert with rule = ", rule, "and known = ", known)
         eval_value = abs(eval(rule[1], {**PRIMITIVES, **current_known}))
         return eval_value, current_known
     current_index = rule_index - 1
@@ -191,9 +195,10 @@ def solveHillClimbing(rule_index, known):
         current_known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
         return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
-        print("in dimension 1")
+        print("in dimension 1 with rule = ", rule, "and known = ", known)
         domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
         def objfunc(p):
+            print("in objefunc with p:",p,"and known:",known)
             # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
             known_dup = known
             known_dup[rule[1]] = p
@@ -205,7 +210,7 @@ def solveHillClimbing(rule_index, known):
         return solution.fun, current_known
 
     else: #dimension == 0
-        print("in dimension 0")
+        print("in dimension 0 with rule = ", rule, "and known = ", known)
         eval_res_list = []
         for i in range(len(rule[2])):
             eval_res_list.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
@@ -214,7 +219,7 @@ def solveHillClimbing(rule_index, known):
         if len(intersection_res) == 0:
             return float('inf'), current_known
         if len(intersection_res) == 1:
-            current_known[rule[1]] = intersection_res[0]
+            current_known[rule[1]] = Point(intersection_res[0].x.round(10),intersection_res[0].y.round(10))
             return solveHillClimbing(current_index, current_known)
         else:
             not_equal_res = handle_not_equal(current_known, rule[1], intersection_res)
@@ -258,6 +263,7 @@ PRIMITIVES = {
     "rotateCcw": rotateCcw,
     "vecFrom2Points": vecFrom2Points,
     "angleCcw": angleCcw,
+    "angleCw": angleCw,
     "intersection": intersection,
     "circleCenter": circleCenter,
     "circleFromDiameter": circleFromDiameter,
