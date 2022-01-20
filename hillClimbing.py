@@ -57,6 +57,11 @@ def angleCcw(p1, p2, p3): #CCW - TODO make sure it is ok
 def angleCw(p1, p2, p3): #CW
     return 2*pi - angleCcw(p1, p2, p3)
 
+def smallestAngle(p1, p2, p3):
+    l1 = Line(p1,p2)
+    l3 = Line(p2,p3)
+    return l1.smallest_angle_between(l3)
+
 def ray_domain(r):
     return lambda t: r.points[0] + r.direction * t
 
@@ -264,6 +269,7 @@ PRIMITIVES = {
     "vecFrom2Points": vecFrom2Points,
     "angleCcw": angleCcw,
     "angleCw": angleCw,
+    "smallestAngle": smallestAngle,
     "intersection": intersection,
     "circleCenter": circleCenter,
     "circleFromDiameter": circleFromDiameter,
