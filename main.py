@@ -48,16 +48,9 @@ def get_partial_prog_from_dl(exercise_name, dl_script_path=None):
     return partial_prog
 
 if __name__ == '__main__':
-
-    # known = {'X': Point(0, 0), 'Z': Point(1, 0), 'd': 1}
-    # rules = [
-    #     [':in', 'Y', ['circle(X, d)', 'circle(Z, d)']],
-    #     ['assert', 'Y', 'abs(dist(X, Y) - d) + abs(dist(Z, Y) - d)']
-    # ]
     print("In main")
-    exercise_name = "tut:middle-1"
-    # TODO2: square-in-square doesnt work
-    statements = front.main(exercise_name=exercise_name)
+    exercise_name = "square-in-square"
+    statements = front.get_exercise(exercise_name=exercise_name)
     partial_prog = synthesis.main(exercise_name=exercise_name, statements=statements)
     print("Partial program is: ")
     print(partial_prog)
