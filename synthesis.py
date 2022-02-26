@@ -345,14 +345,14 @@ def produce_constraint_helper(statement, known_symbols):
         # This predicate will produe the rule: 
         # dist(middle(A, B), O)
         return ("dist(middle({}, {}), {})").format(*statement.vars)
-    elif predicate == "rightangle":
-        return "assert", ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
-    elif (predicate == "angle") or (predicate == "angleccw"):
+    elif (predicate == "rightangle") or (predicate == "angle"):
+        # TODO: This isn't good, should producec rule with angle
+        return "assert", ("angle({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
+    elif (predicate == "angleccw"):
         # angle means we dont care of its ccw or cw 
         # Notice there shouldnt be an angle in degrees here
         return "assert", "angleCcw({}, {}, {}) - {}".format(*statement.vars)
     elif predicate == "notcolinear":
-        # TODO: implement according to Shira's format
         return "not_colinear", statement.vars
     elif predicate == "dist":
         return "assert", ("dist({}, {}) - {}".format(*statement.vars))
@@ -554,6 +554,7 @@ def deductive_synthesis(exercise, partial_prog, statements):
     # Remove assertions on already known  symbols
     statements = [s for s in statements if ((s.predicate != "known") and (not s.is_ready(known_symbols)))]
 
+    iterations_without_assert_in_a_row = 0
     while not is_done:
         new_known_vars = False
         deductive_synthesis_iteration(souffle_script=exercise.dl_file)
@@ -569,13 +570,15 @@ def deductive_synthesis(exercise, partial_prog, statements):
         locus_per_var = best_known_locus_for_each_var(output_vars + other_vars)
         var, locus, dim = get_best_output_var(locus_per_var)
         if var:
-            if dim == 1:
+            if dim == 1 or (iterations_without_assert_in_a_row>=20):
                 # Add assertion rules for previous known symbols
                 add_assertion_rules(
                             partial_prog=partial_prog,
                             exercise=exercise,
                             statements=statements, known_symbols=known_symbols)
+                iterations_without_assert_in_a_row = 0
                 statements = [s for s in statements if not s.is_ready(known_symbols)]
+            iterations_without_assert_in_a_row += 1
             new_known_vars = True
             partial_prog.produce_in_rule(var, locus, dim)
             emit_known_fact(var=var)
