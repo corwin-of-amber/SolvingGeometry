@@ -469,15 +469,15 @@ class PartialProg:
 
     def __str__(self):
         out_str = "known = {}\n".format(str(self.known))
-        out_str += "[\n"
+        out_str += "rules=[\n"
         for rule in  self.rules:
-            out_str += "\t{}\n".format(rule)
+            out_str += "\t{},\n".format(rule)
         out_str += "]\n"
-        out_str += "not equal: "
+        out_str += "not_equal= "
         out_str += str(self.not_equal_rules) + "\n"
-        out_str += "not in: "
+        out_str += "not_in= "
         out_str += str(self.not_in_rules) + "\n"
-        out_str += "not colinear: "
+        out_str += "not_colinear= "
         out_str += str(self.not_colinear) + "\n"
         return out_str
     
