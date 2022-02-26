@@ -69,12 +69,12 @@ SAMPLES = {
                 "?(B)", "?(D)", "?(E)"],
     "9gon": ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d",
             "dist(D,E)=d", "dist(E,F)=d", "dist(F,G)=d",
-            "dist(G,H)=d", "dist(I,I)=d", "angleCcw(A,B,C)=a",
+            "dist(G,H)=d", "dist(H,I)=d", "dist(I,A)=d", "angleCcw(A,B,C)=a",
             "angleCcw(B,C,D)=a", "angleCcw(C,D,E)=a",
             "angleCcw(D,E,F)=a", "angleCcw(E,F,G)=a",
             "angleCcw(F,G,H)=a", "angleCcw(G,H,I)=a",
             "angleCcw(H,I,A)=a", "angleCcw(I,A,B)=a",
-            "A=Point(0,0)", "B=Point(1,0)", "D!=A",
+            "A=Point(0,0)", "B=Point(1,1)", "D!=A",
             "?(C)", "?(D)", "?(E)", "?(F)", "?(G)", "?(H)", "?(I)"
             #realont(q1), realnot(q2), intersect_2_segments
             ],
@@ -88,7 +88,7 @@ SAMPLES = {
            "angle(E,F,G)=90",
            "angle(F,G,H)=90",
            "angle(G,H,E)=90",
-           "A=Point(0,0)", "B=Point(20,0)","?(C)", "?(D)"
+           "A=Point(0,0)", "B=Point(60,0)","?(C)", "?(D)"
            "?(E)", "?(F)", "?(G)", "?(H)"
            ],
    "square-in-triangle":
@@ -102,7 +102,7 @@ SAMPLES = {
              "angle(E,D,G,90)",
              "angle(D,G,F,90)",
              "dist(D,E,d)", "dist(E,F,d)",
-             #"[!=](D,E) & [!=](D,A) & [!=](D,B) & [!=](E,B) & [!=](E,A)",
+             "D!=E", "D!=A", "D!=B", "E!=B", "E!=A",
              "!colinear(A,C,D)",
              "!colinear(A,B,C)",
              "!colinear(D,E,F)", "!colinear(D,E,C)","!colinear(E,F,C)",
@@ -127,7 +127,17 @@ SAMPLES = {
              "middle(L,A,O)", "middle(K,B,O)",
              "O=Point(0,0)", "B=Point(10, 0)",
              #TODO: Make known an option"known(O)", "known(B)", 
-             "?(A)", "?(R)", "?(L)", "?(K)"]
+             "?(A)", "?(R)", "?(L)", "?(K)"],
+     'SAT:clover': [
+            "angleCcw(D,A,B,50)", "angleCcw(C,D,A,45)",
+            "angleCcw(A,B,F,50)", "angleCcw(B,F,E,60)",
+           "angleCcw(F,E,C,90)", "segment(A,B,AB)",
+            "segment(C,D,CD)", "in(P,AB)", "in(P,CD)",
+            "C!=D",
+            # & [!=](AB,CD)",
+           "segment(E,F,EF)", "in(P,EF)", # & [!=](AB,EF) & [!=](CD,EF)",
+           "A=Point(0,0)", "B=Point(5, 0)",
+           "?(C)", "?(D)", "?(E)", "?(F)", "?(P)"]
     }
 # User writes: 
 # dist(A,B) = 10
