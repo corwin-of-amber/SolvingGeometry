@@ -70,7 +70,7 @@ def get_number_as_var(num):
         return new_var
 
     
-POSSIBLE_PREDICATES = ["segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "neq", "output"]
+POSSIBLE_PREDICATES = ["segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "intersect2segmentsQ", "realnot",  "neq", "output"]
 
 # Api for Statement
 # All functions gets strings as parameters
@@ -83,7 +83,12 @@ def middle(a, b, c):
 def _angle_helper(angle_name, a,  b, c, angle_val):
     s = []
     if angle_val == "90":
-        s.append(Statement("rightAngle", vars=[a, b, c]))
+        if angle_name == "angle":
+            s.append(Statement("rightAngle", vars=[a, b, c]))
+        elif angle_name == "angleCcw":
+            s.append(Statement("rightAngleCcw", vars=[a, b, c]))
+        else:
+            raise AssertionError()
         return s
     if is_number(angle_val):
         angle_val = get_number_as_var(deg_to_rad(angle_val))
@@ -121,6 +126,12 @@ def known(var, val):
 
 def notIn(a, domain):
     return Statement("notIn", vars=[a, domain])
+
+def intersect2segmentsQ(a, b, c, d, q):
+    return Statement("intersect2segmentsQ", vars=[a, b, c, d, q])
+    
+def realnot(q):
+    return Statement("realnot", vars=[q])
 
 def neq(a, b):
     return Statement("neq", vars=[a, b])

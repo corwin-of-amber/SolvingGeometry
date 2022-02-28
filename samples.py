@@ -45,9 +45,8 @@ SAMPLES = {
                 "angleCcw(A,B,C)=a", "angleCcw(B,C,D)=a",
                 "angleCcw(C,D,E)=a", "angleCcw(D,E,A)=a",
                 "angleCcw(E,A,B)=a",
-                # TODO: Implement intersect2segmentsQ, realnot
-                #"intersect2segmentsQ(A,B,C,D,q)",
-                #"realnot(q)",
+                "intersect2segmentsQ(A,B,C,D,q)",
+                "realnot(q)",
                 "D!=A", "A!=C",
                 "A=Point(0, 0)", "C=Point(2,0)",
                 "?(B)", "?(D)", "?(E)"],
@@ -57,9 +56,8 @@ SAMPLES = {
                 "angleCcw(A,B,C)=108", "angleCcw(B,C,D)=108",
                 "angleCcw(C,D,E)=108", "angleCcw(D,E,A)=108",
                 "angleCcw(E,A,B)=108",
-                # TODO: Implement intersect2segmentsQ, realnot
-                #"intersect2segmentsQ(A,B,C,D,q)",
-                #"realnot(q)",
+                "intersect2segmentsQ(A,B,C,D,q)",
+                "realnot(q)",
                 "D!=A", "A!=C",
                 "A=Point(0, 0)", "C=Point(2,0)",
                 "?(B)", "?(D)", "?(E)"],
@@ -71,8 +69,9 @@ SAMPLES = {
             "angleCcw(F,G,H)=a", "angleCcw(G,H,I)=a",
             "angleCcw(H,I,A)=a", "angleCcw(I,A,B)=a",
             "A=Point(0,0)", "B=Point(1,1)", "D!=A",
-            "?(C)", "?(D)", "?(E)", "?(F)", "?(G)", "?(H)", "?(I)"
-            #realont(q1), realnot(q2), intersect_2_segments
+            "?(C)", "?(D)", "?(E)", "?(F)", "?(G)", "?(H)", "?(I)",
+             "intersect2segmentsQ(A,B,C,D,q1)", "realnot(q1)",
+             "intersect2segmentsQ(A,B,G,F,q2)", "realnot(q2)"
             ],
     "square-in-square":
           ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d", "dist(D,A)=d", "A!=B", "A!=C", "B!=D",

@@ -44,6 +44,14 @@ class Exercise:
                 self.output_vars.append(var)
                 if var in self.other_vars:
                     self.other_vars.remove(var)
+            elif s.predicate == "realnot":
+                var_name = s.vars[0]
+                # Variable shouldnt be in known  twice
+                assert(var_name not in self.known_symbols)
+                assert(var_name not in self.output_vars)
+                if var_name in self.other_vars:
+                    self.other_vars.remove(var_name)
+                self.known_symbols[var_name] = 0
             else:
                 for var in s.vars:
                     if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars:
@@ -63,7 +71,9 @@ class Exercise:
                 f.write(predicate + "(\"" + s.vars[0] + "\").\n")
             elif s.predicate == "rightAngle":
                 f.write("Angle(\"{}\", \"{}\", \"{}\", \"90\").\n".format(s.vars[0], s.vars[1], s.vars[2]))
-            elif (s.predicate == "notIn") or (s.predicate == "neq") or (s.predicate == "output"):
+            elif s.predicate == "rightAngleCcw":
+                f.write("AngleCcw(\"{}\", \"{}\", \"{}\", \"90\").\n".format(s.vars[0], s.vars[1], s.vars[2]))
+            elif (s.predicate == "notIn") or (s.predicate == "intersect2segmentsQ") or (s.predicate == "realnot") or (s.predicate == "neq") or (s.predicate == "output"):
                 # neq shouldnt be in dl file (only as assert)
                 pass
             else:
@@ -345,12 +355,15 @@ def produce_constraint_helper(statement, known_symbols):
         # This predicate will produe the rule: 
         # dist(middle(A, B), O)
         return ("dist(middle({}, {}), {})").format(*statement.vars)
-    elif (predicate == "rightangle") or (predicate == "angle"):
-        # TODO: This isn't good, should producec rule with angle
+    elif predicate == "rightangle":
         return "assert", ("angle({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
-    elif (predicate == "angleccw"):
+    elif predicate == "rightangleccw":
+        return "assert", ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
+    elif predicate == "angle":
         # angle means we dont care of its ccw or cw 
         # Notice there shouldnt be an angle in degrees here
+        return "assert", "angle({}, {}, {}) - {}".format(*statement.vars)
+    elif predicate == "angleccw":
         return "assert", "angleCcw({}, {}, {}) - {}".format(*statement.vars)
     elif predicate == "notcolinear":
         return "not_colinear", statement.vars
@@ -365,8 +378,11 @@ def produce_constraint_helper(statement, known_symbols):
         # TODO: Should I do something here?
         return
     elif predicate == "notin":
-        # TODO: Implement according to Shira's format
         return "not_in", statement.vars
+    elif predicate == "intersect2segmentsq":
+        val = known_symbols[statement.vars[-1]]
+        if val == 0:
+            return "intersect_2_segments_q", statement.vars[:-1]
     elif predicate == "neq":
         return "not_equal", statement.vars
     elif predicate == "output":
@@ -386,6 +402,7 @@ class PartialProg:
         self.not_equal_rules = []
         self.not_in_rules = []
         self.not_colinear = []
+        self.not_intersect_2_segments = []
 
     def _help_produce_rule(self, locus_name):
         # TODO: this shouldnt be a part of the partialProgram object
@@ -462,6 +479,8 @@ class PartialProg:
                     self.not_in_rules.append(rule)
                 elif rule_type == "not_colinear":
                     self.not_colinear.append(rule)
+                elif rule_type == "intersect_2_segments_q":
+                    self.not_intersect_2_segments.append(list(rule))
         if assert_rules == "":
             return
         self.rules.append(["assert", assert_rules])
@@ -479,6 +498,8 @@ class PartialProg:
         out_str += str(self.not_in_rules) + "\n"
         out_str += "not_colinear= "
         out_str += str(self.not_colinear) + "\n"
+        out_str += "not_intersect_2_segments= "
+        out_str += str(self.not_intersect_2_segments) + "\n"
         return out_str
     
 # The function  emits a known fact for the best var possible, in order to run the deductive part again
