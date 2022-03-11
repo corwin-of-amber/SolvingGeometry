@@ -1,0 +1,11 @@
+circle1	circle4	intersection1
+circle1	line1	intersection2
+circle1	line2	intersection3
+circle2	circle3	intersection4
+circle2	line1	intersection5
+circle2	line2	intersection6
+circle3	line1	intersection7
+circle3	line2	intersection8
+circle4	line1	intersection9
+circle4	line2	intersection10
+line1	line2	intersection11

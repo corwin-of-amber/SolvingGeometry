@@ -1,0 +1,17 @@
+import React, { useEffect, useState } from 'react';
+import './MainContent.css';
+import { PageLayout } from '.././PageLayout/PageLayout';
+import { SideBar } from '.././SideBar/SideBar';
+
+
+export const MainContent = () => {
+    
+    return (
+        
+        <div className="main-content-container">
+            <SideBar/>
+            <PageLayout/>
+        </div>
+        
+    )
+}
