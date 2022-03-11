@@ -37,10 +37,10 @@ def rayVec(p, vec):
 def lineVec(p, vec):
     return Line(p, Point(p.x + vec.x, p.y + vec.y))
 
-def rotateCcw(vec, angle):
+def rotateCcw(vec, angle=pi/2):
     return vec.rotate(angle)
 
-def rotateCw(vec, angle):
+def rotateCw(vec, angle=pi/2):
     angle = angle % (2*pi)
     angle = 2*pi - angle
     return vec.rotate(angle)
