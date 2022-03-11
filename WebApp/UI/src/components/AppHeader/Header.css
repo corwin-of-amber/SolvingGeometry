@@ -1,0 +1,19 @@
+.app-logo-container{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background-color:rgb(68, 129, 187);
+  color: rgb(255, 255, 255);
+}
+
+.app-header {
+  font-size: 22px;
+  font-weight: 200;
+  display: flex;
+  margin: auto 0;
+}
+
+.header-container {
+  height: var(--header-height);
+  background-color:rgb(68, 129, 187);
+}

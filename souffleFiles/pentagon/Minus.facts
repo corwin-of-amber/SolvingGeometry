@@ -1,0 +1,10 @@
+A	B	minus1
+A	E	minus2
+B	A	minus3
+B	C	minus4
+C	B	minus5
+C	D	minus6
+D	C	minus7
+D	E	minus8
+E	A	minus9
+E	D	minus10
