@@ -24,6 +24,10 @@ class Editor extends React.Component<EditorProps> {
         this.cm.on('change', () => Promise.resolve().then(() =>
             this.props.onChange({value: this.cm!.getValue()})));
     }
+
+    open(programText: string) {
+        this.cm?.setValue(programText);
+    }
 }
 
 type EditorProps = { onChange: (ev: {value: string}) => void };

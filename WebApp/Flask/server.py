@@ -1,4 +1,5 @@
 from flask import Flask, Response, request, jsonify, send_from_directory
+import json
 
 UI_BUILD_DIR = "../UI/build"
 
@@ -25,7 +26,8 @@ def create_response(status_code:int) -> Response:
 
 @app.route("/samples")
 def samples_index():
-    return json.dumps(front.SAMPLES)
+    import samples
+    return json.dumps(samples.SAMPLES)
 
 
 # @app.route('/add_reply/', methods=['GET'])
