@@ -35,7 +35,11 @@ class CodeMirror {
     }
 
     setValue(value: string) {
+        var events = this.state.field(CodeMirror.eventField);
         this.view.setState(this.newState(value));
+        this.view.dispatch({
+            effects: eventEffect.of({value: events})
+        });
     }
 
     newState(doc: string = "") {
@@ -87,6 +91,7 @@ namespace CodeMirror {
                         for (let h of v) value.on(k, h);
                     for (let [k, v] of Object.entries(e.value.off ?? {}))
                         for (let h of v) value.off(k, h);
+                    if (e.value.value) value = e.value.value;
                 }
             }
     
@@ -101,7 +106,7 @@ namespace CodeMirror {
     
     
     export const eventEffect =
-        StateEffect.define<{on?: EventHandlers, off?: EventHandlers}>();
+        StateEffect.define<{value?: EventEmitter, on?: EventHandlers, off?: EventHandlers}>();
 }
 
 /* eslint-disable */
