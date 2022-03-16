@@ -104,6 +104,7 @@ namespace CodeMirror {
         StateEffect.define<{on?: EventHandlers, off?: EventHandlers}>();
 }
 
+/* eslint-disable */
 import eventField = CodeMirror.eventField;
 import eventEffect = CodeMirror.eventEffect;
 

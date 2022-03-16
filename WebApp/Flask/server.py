@@ -1,6 +1,8 @@
 from flask import Flask, Response, request, jsonify, send_from_directory
 
-app = Flask(__name__)
+UI_BUILD_DIR = "../UI/build"
+
+app = Flask(__name__, static_url_path="/", static_folder=UI_BUILD_DIR)
 Port = 8000
 
 def create_response(status_code:int) -> Response:
@@ -20,6 +22,10 @@ def create_response(status_code:int) -> Response:
 
 
 
+
+@app.route("/samples")
+def samples_index():
+    return json.dumps(front.SAMPLES)
 
 
 # @app.route('/add_reply/', methods=['GET'])
@@ -59,32 +65,7 @@ def create_response(status_code:int) -> Response:
 
 @app.route('/')
 def index():
-    return send_from_directory('build', 'index.html')
-
-
-@app.route('/static/css/<file>/')
-def send_css(file):
-    return send_from_directory('build/static/css', file)
-
-
-@app.route('/static/js/<file>/')
-def send_js(file):
-    return send_from_directory('build/static/js', file)
-
-
-@app.route('/static/media/<file>/')
-def send_media(file):
-    return send_from_directory('build/static/media', file)
-
-
-@app.route('/manifest.json')
-def send_manifest():
-    return send_from_directory('build', 'manifest.json')
-
-
-@app.route('/favicon.ico')
-def send_favicon():
-    return send_from_directory('build', 'favicon.ico')
+    return send_from_directory(UI_BUILD_DIR, 'index.html')
 
 
 if __name__ == '__main__':
