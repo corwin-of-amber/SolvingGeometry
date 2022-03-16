@@ -7,16 +7,15 @@ SAMPLES = {
                 "X!=Z",
                 "Z=Point(136,0)",
                         "?(Y)"],
-    "myTriangle": ["?(W)",
-                    "?(Y)",
-                    "X=Point(0, 0)",
-                    "Z=Point(1, 0)",
-                    "W!=X",
-                    "dist(X,Y)=1",
-                    "dist(Z,Y)=1",
-                    "dist(W,Y)=1",
-                    "dist(Z,W)=1"
-                    ],
+    "myTriangle": 
+           # Another example to the way we can write the input: can also write multiple predicates in the same string, can write several vars in same output statement
+            ["?(W, Y) & X=Point(0, 0) & Z=Point(1, 0)",
+            "W!=X",
+            "dist(X,Y)=1",
+            "dist(Z,Y)=1",
+            "dist(W,Y)=1",
+            "dist(Z,W)=1"
+            ],
     "square": ["dist(A,B)=d",
                "dist(B,C)=d",
                "dist(C,D)=d",
@@ -74,7 +73,7 @@ SAMPLES = {
              "intersect2segmentsQ(A,B,G,F,q2)", "realnot(q2)"
             ],
     "square-in-square":
-          ["dist(A,B)=d", "dist(B,C)=d", "dist(C,D)=d", "dist(D,A)=d", "A!=B", "A!=C", "B!=D",
+          ["dist(A, B)=d & dist(B, C) = d & dist(C,D)=d", "dist(D,A)=d", "A!=B", "A != C", "B!=D",
           #"angleCw(A,D,C)=90",
            "angleCcw(A,D,C)=90",
            "segment(A,B,AB)","in(E,AB)", "dist(A,E)=15",
@@ -85,7 +84,7 @@ SAMPLES = {
            "angle(F,G,H)=90",
            "angle(G,H,E)=90",
            "A=Point(0,0)", "B=Point(60,0)","?(C)", "?(D)"
-           "?(E)", "?(F)", "?(G)", "?(H)"
+           "?(E, F, G, H)"
            ],
    "square-in-triangle":
             ["A=Point(0,0)", "B=Point(2,0)",
