@@ -37,10 +37,10 @@ def rayVec(p, vec):
 def lineVec(p, vec):
     return Line(p, Point(p.x + vec.x, p.y + vec.y))
 
-def rotateCcw(vec, angle):
+def rotateCcw(vec, angle=pi/2):
     return vec.rotate(angle)
 
-def rotateCw(vec, angle):
+def rotateCw(vec, angle=pi/2):
     angle = angle % (2*pi)
     angle = 2*pi - angle
     return vec.rotate(angle)
@@ -56,6 +56,9 @@ def angleCcw(p1, p2, p3): #CCW - TODO make sure it is ok
 
 def angleCw(p1, p2, p3): #CW
     return 2*pi - angleCcw(p1, p2, p3)
+
+def angle(p1, p2, p3):
+    return min(angleCw(p1, p2, p3), angleCcw(p1, p2, p3))
 
 def smallestAngle(p1, p2, p3):
     l1 = Line(p1,p2)
@@ -83,7 +86,7 @@ def get_domain(entity):
         return segment_domain(entity)
     elif type(entity) is sympy.geometry.ellipse.Circle:
         return circle_domain(entity)
-
+    return None
 
 def is_duplicate(known, p):
     for k in known.values():
@@ -201,57 +204,116 @@ def solveHillClimbing(rule_index, known):
         return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
         print("in dimension 1 with rule = ", rule, "and known = ", known)
-        domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
-        def objfunc(p):
-            print("in objefunc with p:",p,"and known:",known)
-            # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
-            known_dup = known
-            known_dup[rule[1]] = p
-            res = solveHillClimbing(current_index,known_dup)[0]
-            return res
-        solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Nelder-Mead")
-        current_known[rule[1]] = domain(*solution.x)
-        current_known = solveHillClimbing(current_index, current_known)[1]
-        return solution.fun, current_known
+        if "orth" not in rule[2][0]:
+            domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
+            def objfunc(p):
+                print("in objefunc with p:", p, "and known:", known)
+                # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
+                known_dup = known
+                known_dup[rule[1]] = p
+                res = solveHillClimbing(current_index, known_dup)[0]
+                return res
+            solution = minimize(lambda v: abs(objfunc(domain(*v))), 0.0, method="Nelder-Mead")
+            current_known[rule[1]] = domain(*solution.x)
+            current_known = solveHillClimbing(current_index, current_known)[1]
+            return solution.fun, current_known
+        else: #"orth" in rule
+            new_rule1 = rule[2][0].replace("orth", "rotateCw")
+            domain1 = get_domain(eval(new_rule1, {**PRIMITIVES, **current_known}))
+            new_rule2 = rule[2][0].replace("orth", "rotateCcw")
+            domain2 = get_domain(eval(new_rule2, {**PRIMITIVES, **current_known}))
+            def objfunc1(p):
+                print("in objefunc with p:",p,"and known:",known)
+                # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
+                known_dup = known
+                known_dup[rule[1]] = p
+                res = solveHillClimbing(current_index,known_dup)[0]
+                return res
+            solution1 = minimize(lambda v: abs(objfunc1(domain1(*v))), 0.0, method="Nelder-Mead")
+            def objfunc2(p):
+                print("in objefunc with p:",p,"and known:",known)
+                # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
+                known_dup = known
+                known_dup[rule[1]] = p
+                res = solveHillClimbing(current_index,known_dup)[0]
+                return res
+            solution2 = minimize(lambda v: abs(objfunc2(domain2(*v))), 0.0, method="Nelder-Mead")
+            if solution1.fun < solution2.fun:
+                current_known[rule[1]] = domain1(*solution1.x)
+                current_known = solveHillClimbing(current_index, current_known)[1]
+                return solution1.fun, current_known
+            else:
+                current_known[rule[1]] = domain2(*solution2.x)
+                current_known = solveHillClimbing(current_index, current_known)[1]
+                return solution2.fun, current_known
 
     else: #dimension == 0
         print("in dimension 0 with rule = ", rule, "and known = ", known)
-        eval_res_list = []
+        eval_res_list = [[]]
         for i in range(len(rule[2])):
-            eval_res_list.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
-        intersection_res = intersection(*eval_res_list)
-        print("with p = ", intersection_res)
-        if len(intersection_res) == 0:
-            return float('inf'), current_known
-        if len(intersection_res) == 1:
-            current_known[rule[1]] = Point(intersection_res[0].x.round(10),intersection_res[0].y.round(10))
-            return solveHillClimbing(current_index, current_known)
-        else:
-            not_equal_res = handle_not_equal(current_known, rule[1], intersection_res)
-            if not_equal_res is not None:
-                current_known[rule[1]] = intersection_res[not_equal_res]
-                return solveHillClimbing(current_index, current_known)
-            not_in_res = handle_not_in(current_known, rule[1], intersection_res)
-            if not_in_res is not None:
-                current_known[rule[1]] = intersection_res[not_in_res]
-                return solveHillClimbing(current_index, current_known)
-            not_collinear_res = handle_not_collinear(current_known, rule[1], intersection_res)
-            if not_collinear_res is not None:
-                current_known[rule[1]] = intersection_res[not_collinear_res]
-                return solveHillClimbing(current_index, current_known)
-            not_intersect_2_segments_res = handle_not_intersect_2_segments(current_known, rule[1], intersection_res)
-            if not_intersect_2_segments_res is not None:
-                current_known[rule[1]] = intersection_res[not_intersect_2_segments_res]
-                return solveHillClimbing(current_index, current_known)
-
-            current_known[rule[1]] = intersection_res[0]
-            res1, known1 = solveHillClimbing(current_index, current_known)
-            current_known[rule[1]] = intersection_res[1]
-            res2, known2 = solveHillClimbing(current_index, current_known)
-            if res1 < res2:
-                return res1, known1
+            if "orth" in rule[2][i]:
+                for j in range(len(eval_res_list)):
+                    li = eval_res_list[j]
+                    new_li = copy.deepcopy(li)
+                    li.append(eval(rule[2][i].replace("orth", "rotateCw"), {**PRIMITIVES, **current_known}))
+                    new_li.append(eval(rule[2][i].replace("orth", "rotateCcw"), {**PRIMITIVES, **current_known}))
+                    eval_res_list.append(new_li)
             else:
-                return res2, known2
+                for li in eval_res_list:
+                    li.append(eval(rule[2][i], {**PRIMITIVES, **current_known}))
+        intersection_res_list = [intersection(*li) for li in eval_res_list]
+        min_ret = float('inf')
+        min_rule_res = None
+        for intersection_res in intersection_res_list:
+            print("with p = ", intersection_res)
+            if len(intersection_res) == 0:
+                continue
+            if len(intersection_res) == 1:
+                current_known[rule[1]] = Point(intersection_res[0].x.round(10),intersection_res[0].y.round(10))
+                ret1, _= solveHillClimbing(current_index, current_known)
+                if ret1 < min_ret:
+                    min_ret, min_rule_res = ret1, current_known[rule[1]]
+                continue
+            else:
+                not_equal_res = handle_not_equal(current_known, rule[1], intersection_res)
+                if not_equal_res is not None:
+                    current_known[rule[1]] = intersection_res[not_equal_res]
+                    ret1, _= solveHillClimbing(current_index, current_known)
+                    if ret1 < min_ret:
+                        min_ret, min_rule_res = ret1, current_known[rule[1]]
+                    continue
+                not_in_res = handle_not_in(current_known, rule[1], intersection_res)
+                if not_in_res is not None:
+                    current_known[rule[1]] = intersection_res[not_in_res]
+                    ret1, _= solveHillClimbing(current_index, current_known)
+                    if ret1 < min_ret:
+                        min_ret, min_rule_res = ret1, current_known[rule[1]]
+                    continue
+                not_collinear_res = handle_not_collinear(current_known, rule[1], intersection_res)
+                if not_collinear_res is not None:
+                    current_known[rule[1]] = intersection_res[not_collinear_res]
+                    ret1, _= solveHillClimbing(current_index, current_known)
+                    if ret1 < min_ret:
+                        min_ret, min_rule_res = ret1, current_known[rule[1]]
+                    continue
+                not_intersect_2_segments_res = handle_not_intersect_2_segments(current_known, rule[1], intersection_res)
+                if not_intersect_2_segments_res is not None:
+                    current_known[rule[1]] = intersection_res[not_intersect_2_segments_res]
+                    ret1, _= solveHillClimbing(current_index, current_known)
+                    if ret1 < min_ret:
+                        min_ret, min_rule_res = ret1, current_known[rule[1]]
+                    continue
+
+                current_known[rule[1]] = intersection_res[0]
+                res1, known1 = solveHillClimbing(current_index, current_known)
+                current_known[rule[1]] = intersection_res[1]
+                res2, known2 = solveHillClimbing(current_index, current_known)
+                if res1 < min_ret:
+                    min_ret, min_rule_res = res1, intersection_res[0]
+                if res2 < min_ret:
+                    min_ret, min_rule_res = res2, intersection_res[1]
+        current_known[rule[1]] = min_rule_res
+        return solveHillClimbing(current_index, current_known)
 
 
 PRIMITIVES = {
@@ -269,6 +331,7 @@ PRIMITIVES = {
     "vecFrom2Points": vecFrom2Points,
     "angleCcw": angleCcw,
     "angleCw": angleCw,
+    "angle": angle,
     "smallestAngle": smallestAngle,
     "intersection": intersection,
     "circleCenter": circleCenter,
