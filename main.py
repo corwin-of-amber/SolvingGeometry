@@ -1,4 +1,4 @@
-import front
+import parser
 import synthesis
 import hillClimbing
 import os
@@ -31,13 +31,13 @@ SAMPLES = {"triangle": [
 
 def skip_front(exercise_name):
     # Allows to uses input from sample and  skip the front
-    statements=front.build_statements(SAMPLES[exercise_name])
+    statements=parser.build_statements(SAMPLES[exercise_name])
     return statements
 
 def get_partial_prog_from_dl(exercise_name, dl_script_path=None):
     if not dl_script_path:
         dl_script_path = script = os.path.join("tmpInput", exercise_name + ".dl")
-    statements = front.parse_dl(dl_script_path)
+    statements = parser.parse_dl(dl_script_path)
     exercise = synthesis.Exercise(exercise_name)
     exercise.build_exercise_from_dl(
                     dl_file=dl_script_path,
@@ -50,7 +50,7 @@ def get_partial_prog_from_dl(exercise_name, dl_script_path=None):
 if __name__ == '__main__':
     print("In main")
     exercise_name = "square-in-square"
-    statements = front.get_exercise(exercise_name=exercise_name)
+    statements = parser.get_exercise(exercise_name=exercise_name)
     partial_prog = synthesis.main(exercise_name=exercise_name, statements=statements)
     print("Partial program is: ")
     print(partial_prog)
