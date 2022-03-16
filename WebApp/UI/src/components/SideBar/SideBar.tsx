@@ -27,35 +27,30 @@ export const SideBar = () => {
 
     const [userRules, setUserRules] = useState<string>('');
 
-    /*
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault();
-        setUserRules(e.target.value);
-    }*/
     const handleChange = (e: {value: string}) => {
         setUserRules(e.value);
     };
+
+    const handleCompile = () => {
+        console.log('compile', userRules);
+    }
+
+    const handleSolve = () => {
+        console.log('solve', userRules);
+    }
 
     return (
         <div className='sidebar'>
             <div className="user-input">
                 <h3 className="user-input-title">Problem Constraints</h3>
                 <Editor onChange={handleChange}/>
-                {/*
-                <TextField
-                    id="user-input-textfield"
-                    label="Your Rules"
-                    placeholder='Insert rules here'
-                    multiline
-                    rows={10}
-                onChange={handleChange}/> */}
                 <div className='solve-buttons'>
                     <Tooltip title="Add points to model" arrow>
-                        <Button onClick={() => {alert('clicked');}} style={{backgroundColor:"white"}} variant="outlined">Compile</Button>
+                        <Button onClick={handleCompile} style={{backgroundColor:"white"}} variant="outlined">Compile</Button>
                     </Tooltip>
                     <div style={{width:"20px"}}></div>
                     <Tooltip title="Solve the problem" arrow>
-                        <Button onClick={() => {alert('clicked');}} variant="contained">Solve</Button>
+                        <Button onClick={handleSolve} variant="contained">Solve</Button>
                     </Tooltip>
                 </div>
                 

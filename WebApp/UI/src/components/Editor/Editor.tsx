@@ -22,7 +22,7 @@ class Editor extends React.Component<EditorProps> {
         assert(div)
         this.cm = new CodeMirror(div);
         this.cm.on('change', () => Promise.resolve().then(() =>
-            console.log(this.cm!.getValue())));
+            this.props.onChange({value: this.cm!.getValue()})));
     }
 }
 
