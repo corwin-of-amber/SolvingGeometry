@@ -425,12 +425,11 @@ class PartialProg:
             # TODO: try to use this and make sure its fine
             return "{}".format(param_strings[0])
         if reason_title == "orth":
-            return "rotateCcw({}, pi/2)".format(param_strings[0])
+            return "orth({})".format(param_strings[0])
         if reason_title == "perp_bisect-0":
             # This hack will work,  but it doesnt actually create a tree
             middle_point = "middle({}, {})".format(param_strings[0], param_strings[1])
-            #vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
-            vec = "rotateCcw(vecFrom2Points({}, {}), pi/2)".format(param_strings[0], param_strings[1])
+            vec = "orth(vecFrom2Points({}, {}))".format(param_strings[0], param_strings[1])
             return 'linevec(({}), ({}))'.format(middle_point, vec)
         if len(param_strings) == 1:
             return '{}({})'.format(reason_title, *param_strings)
