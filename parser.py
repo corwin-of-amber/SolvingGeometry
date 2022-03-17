@@ -77,6 +77,9 @@ class Statement:
     
     def __str__(self):
         return "{}{}".format(self.predicate, self.vars)
+
+    def __json__(self):
+        return self.__dict__
     
 
 # Api for Statement
@@ -317,6 +320,7 @@ def parse_free_text(input_text):
         raise ParsingException()
         
     statements = [] # a list of objects from type Statement
+    numbers.clear() # TODO remove dependency on global state :/
     for match in parse_res:
         new_statements = parse_single_match(match[0])
         if type(new_statements) == list:
@@ -349,4 +353,4 @@ def get_exercise(exercise_name=None):
     #return parse_dl(os.path.join(souffle_in_dir,exercise_name + ".dl"))        
 
 if __name__ == "__main__":
-    main("triangle")
+    get_exercise("triangle")

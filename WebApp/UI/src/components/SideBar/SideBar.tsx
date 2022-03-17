@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './SideBar.css';
-import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -18,7 +17,7 @@ function renderRow(props: ListChildComponentProps) {
     return (
       <ListItem style={style} key={index} component="div" disablePadding>
         <ListItemButton>
-          <ListItemText primary={`Item ${index + 1}`} />
+            <ListItemText primary={JSON.stringify(props.data[index])}></ListItemText>
         </ListItemButton>
       </ListItem>
     );
@@ -34,7 +33,9 @@ class SideBar extends React.Component<{}, SideBarState> {
         this.state = {
             userRules: '',
             samples: {},
-            sampleNames: []
+            sampleNames: [],
+            parsedInput: [],
+            progSteps: []
         };
     }
 
@@ -45,6 +46,7 @@ class SideBar extends React.Component<{}, SideBarState> {
 
     handleCompile = () => {
         console.log('compile', this.state.userRules);
+        this.compileText(this.state.userRules);
     }
 
     handleSolve = () => {
@@ -65,11 +67,21 @@ class SideBar extends React.Component<{}, SideBarState> {
             this.editorRef?.current?.open(sample.join('\n'));
     }
 
-    componentDidMount() {
-        this.getSamples();
+    async compileText(programText: string) {
+        var r = await fetch('/compile', {method: 'POST', body: programText});
+        if (!r.ok) throw r;
+        this.setState({parsedInput: (await r.json()).statements});
+    }
+
+    async componentDidMount() {
+        await this.getSamples();
+        this.openSample(this.state.sampleNames[0]);
+        this.handleCompile();
     }
 
     render() {
+        let items = this.state.parsedInput;
+
         return (
             <div className='sidebar'>
                 <div className="user-input">
@@ -98,11 +110,12 @@ class SideBar extends React.Component<{}, SideBarState> {
                             <FixedSizeList
                                 className="List"
                                 height={height}
-                                itemCount={10}
+                                itemCount={items.length}
+                                itemData={items}
                                 itemSize={35}
                                 overscanCount={5}
                                 width={width}>
-                                {renderRow}
+                                {p => renderRow(p)}
                             </FixedSizeList>
                             )}
                         </AutoSizer>
@@ -117,6 +130,8 @@ type SideBarState = {
     userRules: string
     samples: {[name: string]: any}
     sampleNames: string[]
+    parsedInput: any[],
+    progSteps: any[]
 }
 
 

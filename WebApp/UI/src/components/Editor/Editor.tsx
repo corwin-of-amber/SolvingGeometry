@@ -27,6 +27,7 @@ class Editor extends React.Component<EditorProps> {
 
     open(programText: string) {
         this.cm?.setValue(programText);
+        this.props.onChange?.({value: this.cm!.getValue()});
     }
 }
 
