@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './MainContent.css';
-import { PageLayout } from '.././PageLayout/PageLayout';
+import { DrawingArea } from '../DrawingArea/DrawingArea';
 import { SideBar } from '.././SideBar/SideBar';
 
 
@@ -10,7 +10,7 @@ export const MainContent = () => {
         
         <div className="main-content-container">
             <SideBar/>
-            <PageLayout/>
+            <DrawingArea/>
         </div>
         
     )

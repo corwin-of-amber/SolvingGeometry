@@ -1,0 +1,18 @@
+.drawingArea {
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+}
+
+.drawingArea svg {
+    width: 2000px;
+    min-width: 100%;
+}
+
+g.grid path.axis {
+    stroke: #999;
+}
+
+g.grid path.tick {
+    stroke: #ddf;
+}
