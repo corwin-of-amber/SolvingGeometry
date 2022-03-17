@@ -16,3 +16,23 @@ g.grid path.axis {
 g.grid path.tick {
     stroke: #ddf;
 }
+
+g.diagram g.labeledPoint circle {
+    r: 4px;
+    fill: rgb(255, 0, 140);
+    stroke: rgb(168 47 176);
+}
+
+g.diagram g.labeledPoint text {
+    text-anchor: end;
+    dominant-baseline: middle;
+}
+
+g.diagram g.labeledPoint text.fore {
+    fill: #7c5d7c;
+}
+
+g.diagram g.labeledPoint text.stroked {
+    stroke: white;
+    stroke-width: 2px;
+}
