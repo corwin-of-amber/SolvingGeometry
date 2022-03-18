@@ -2,20 +2,21 @@ import React, { useEffect, useState } from 'react';
 import './MainContent.css';
 import { DrawingArea } from '../DrawingArea/DrawingArea';
 import { SideBar } from '../SideBar/SideBar';
-import { LabeledPoint } from '../DrawingArea/Shapes';
+import { Shapes, LabeledPoint } from '../DrawingArea/Shapes';
 
 
 export const MainContent = () => {
     
-    var [points, setPoints] = React.useState<LabeledPoint[]>([
-        {label: "X", at: {x: 0, y: 0}},
-        {label: "Z", at: {x: 136, y: 0}}
-    ]);
+    var [points, setPoints] = React.useState<LabeledPoint[]>([]);
+
+    const handleShapesReceived = (shapes: Shapes) => {
+        if (shapes.points) setPoints(shapes.points);
+    }
 
     return (
         
         <div className="main-content-container">
-            <SideBar/>
+            <SideBar onShapesReceived={handleShapesReceived}/>
             <DrawingArea points={points}/>
         </div>
         

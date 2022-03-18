@@ -9,6 +9,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import Tooltip from '@mui/material/Tooltip';
 import { Editor } from '../Editor/Editor'; 
 import { ListOfSamples } from '../ListOfSamples/ListOfSamples';
+import { LabeledPoint, Shapes } from '../DrawingArea/Shapes';
 
 
 function renderRow(props: ListChildComponentProps) {
@@ -23,13 +24,15 @@ function renderRow(props: ListChildComponentProps) {
     );
 }
 
-class SideBar extends React.Component<{}, SideBarState> {
+class SideBar extends React.Component<SideBarProps, SideBarState> {
 
-    editorRef: React.RefObject<Editor>
+    editor = React.createRef<Editor>()
+    listOfSamples = React.createRef<ListOfSamples>()
+
+    readonly DEFAULT_SAMPLE = "triangle"
 
     constructor(props: {}) {
         super(props);
-        this.editorRef = React.createRef<Editor>();
         this.state = {
             userRules: '',
             samples: {},
@@ -44,9 +47,11 @@ class SideBar extends React.Component<{}, SideBarState> {
         this.setState({userRules: e.value});
     }
 
-    handleCompile = () => {
+    handleCompile = async () => {
         console.log('compile', this.state.userRules);
-        this.compileText(this.state.userRules);
+        var compiled = await this.compileText(this.state.userRules);
+        this.setState({parsedInput: compiled.statements});
+        this.extractPoints(compiled.statements);
     }
 
     handleSolve = () => {
@@ -64,18 +69,34 @@ class SideBar extends React.Component<{}, SideBarState> {
     openSample(name: string) {
         var sample = this.state.samples[name];
         if (sample)
-            this.editorRef?.current?.open(sample.join('\n'));
+            this.editor.current?.open(sample.join('\n'));
     }
 
     async compileText(programText: string) {
         var r = await fetch('/compile', {method: 'POST', body: programText});
         if (!r.ok) throw r;
-        this.setState({parsedInput: (await r.json()).statements});
+        return await r.json();
+    }
+
+    /** @todo this logic belongs in `MainContent` */
+    extractPoints(statements: Statement[]) {
+        var pts = statements.map(stmt => {
+            if (stmt.predicate === 'known') {
+                var [name, value] = stmt.vars;
+                if (value.$type === 'Point2D')
+                    return {
+                        label: name.replace(/^n/, '' /** @oops */),
+                        at: {x: +value.x, y: +value.y}
+                    };
+            }
+        }).filter(x => x) as LabeledPoint[];
+        console.log(pts);
+        this.props.onShapesReceived?.({points: pts});
     }
 
     async componentDidMount() {
         await this.getSamples();
-        this.openSample(this.state.sampleNames[0]);
+        this.listOfSamples.current?.switchTo(this.DEFAULT_SAMPLE);
         this.handleCompile();
     }
 
@@ -87,10 +108,11 @@ class SideBar extends React.Component<{}, SideBarState> {
                 <div className="user-input">
                     <h3 className="user-input-title">
                         Problem Constraints
-                        <ListOfSamples sampleNames={this.state.sampleNames}
+                        <ListOfSamples ref={this.listOfSamples}
+                            sampleNames={this.state.sampleNames}
                             onSelect={name => this.openSample(name)}/>
                     </h3>
-                    <Editor ref={this.editorRef} onChange={this.handleChange}/>
+                    <Editor ref={this.editor} onChange={this.handleChange}/>
                     <div className='solve-buttons'>
                         <Tooltip title="Add points to model" arrow>
                             <Button onClick={this.handleCompile} style={{backgroundColor:"white"}} variant="outlined">Compile</Button>
@@ -126,6 +148,10 @@ class SideBar extends React.Component<{}, SideBarState> {
     }
 }
 
+type SideBarProps = {
+    onShapesReceived?: (shapes: Shapes) => void
+}
+
 type SideBarState = {
     userRules: string
     samples: {[name: string]: any}
@@ -133,6 +159,8 @@ type SideBarState = {
     parsedInput: any[],
     progSteps: any[]
 }
+
+type Statement = {predicate: string, vars: any[]}
 
 
 export { SideBar }

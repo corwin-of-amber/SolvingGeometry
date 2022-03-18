@@ -1,5 +1,7 @@
 from flask import Flask, Response, request, jsonify, send_from_directory
 import json
+from serialization import json_custom
+
 
 HOST = 'localhost'
 PORT = 8000
@@ -56,13 +58,6 @@ def solve_request():
     result = {}
 
     return json_custom(result)
-
-
-def json_custom(o):
-    def fallback(o):
-        if hasattr(o, '__json__'): return o.__json__()
-        else: return str(o)
-    return json.dumps(o, default=fallback)
 
 
 # @app.route('/add_reply/', methods=['GET'])
