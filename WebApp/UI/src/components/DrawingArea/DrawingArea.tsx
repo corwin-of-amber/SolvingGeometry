@@ -1,6 +1,6 @@
 import assert from 'assert';
 import React from 'react';
-import { Zoom } from '../../infra/ui-pan-zoom';
+import { Pan, Zoom } from '../../infra/ui-pan-zoom';
 import { LabeledPoint } from './Shapes';
 import './DrawingArea.css';
 
@@ -13,6 +13,7 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
     ticksep = 20
     labelOffset = {x: -7, y: 1}
 
+    panner?: Pan
     zoomer?: Zoom
 
     constructor(props: DrawingAreaProps) {
@@ -35,6 +36,7 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
 
     componentDidMount() {
         this.scrollCenter();
+        this.panner = new Pan(this.div.current!);
         this.zoomer = new Zoom(this.div.current!);
         this.zoomer.setZoom = z =>
             this.svg.current!.style.width = `${(this.box.right - this.box.left) * z}px`;

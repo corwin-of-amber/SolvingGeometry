@@ -1,8 +1,61 @@
 
 
 
-class Zoom {
+class PanZoomBase {
     $el: HTMLElement
+
+    setScroll: (xy: PointXY) => void
+    getScroll: () => PointXY
+
+    constructor($el: HTMLElement) {
+        this.$el = $el;
+        this.setScroll = (xy) => {
+            this.$el.scrollLeft = xy.x;
+            this.$el.scrollTop = xy.y;
+        };
+        this.getScroll = () => ({x: this.$el.scrollLeft, y: this.$el.scrollTop});
+    }
+}
+
+
+class Pan extends PanZoomBase {
+    gesture?: {start: PointXY, initialScroll: PointXY}
+
+    constructor($el: HTMLElement) {
+        super($el);
+        this.$el.addEventListener('pointerdown', (ev) => this.onStart(ev));
+        this.$el.addEventListener('pointermove', (ev) => this.onMove(ev));
+        this.$el.addEventListener('pointerup', (ev) => this.onEnd(ev));
+    }
+
+    onStart(ev: PointerEvent) {
+        this.$el.classList.add('panning');
+        this.gesture = {
+            start: {x: ev.x, y: ev.y},
+            initialScroll: this.getScroll()
+        };
+        this.$el.setPointerCapture(ev.pointerId);
+        ev.preventDefault();
+    }
+
+    onMove(ev: PointerEvent) {
+        if (this.gesture) {
+            var {start: o, initialScroll: d} = this.gesture;
+            this.setScroll({x: d.x - (ev.x - o.x), y: d.y - (ev.y - o.y)});
+            ev.preventDefault();
+        }
+    }
+
+    onEnd(ev: PointerEvent) {
+        this.$el.classList.remove('panning');
+        this.gesture = undefined;
+        this.$el.setPointerCapture(ev.pointerId);
+        ev.preventDefault();
+    }
+}
+
+
+class Zoom extends PanZoomBase {
     zoomRange: {min: number, max: number}
     accel: number
 
@@ -11,11 +64,9 @@ class Zoom {
     pscroll: FPointXY
 
     setZoom: (z: number) => void
-    setScroll: (xy: PointXY) => void
-    getScroll: () => PointXY
 
     constructor($el: HTMLElement) {
-        this.$el = $el;
+        super($el);
         this.zoomRange = {min: .25, max: 8};
         this.accel = 5;
         this.areaOffset = {x: 0, y: 0};
@@ -23,11 +74,6 @@ class Zoom {
         this.pscroll = {x: 0, y: 0};
 
         this.setZoom = (z) => { /* no default impl; caller should set this */ };
-        this.setScroll = (xy) => {
-            this.$el.scrollLeft = xy.x;
-            this.$el.scrollTop = xy.y;
-        };
-        this.getScroll = () => ({x: this.$el.scrollLeft, y: this.$el.scrollTop});
 
         this.$el.addEventListener('scroll', () => this.onScroll());
         this.$el.addEventListener('wheel', (ev) => this.onWheel(ev));
@@ -75,5 +121,5 @@ function ptround(p: PointXY) {
 }
 
 
-export { Zoom }
+export { Pan, Zoom }
 export type { PointXY, FPointXY }
