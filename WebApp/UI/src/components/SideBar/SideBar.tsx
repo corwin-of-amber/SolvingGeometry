@@ -82,10 +82,10 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
     extractPoints(statements: Statement[]) {
         var pts = statements.map(stmt => {
             if (stmt.predicate === 'known') {
-                var [name, value] = stmt.vars;
-                if (value.$type === 'Point2D')
+                var [label, value] = stmt.vars;
+                if (typeof label === 'string' && value.$type === 'Point2D')
                     return {
-                        label: name.replace(/^n/, '' /** @oops */),
+                        label,
                         at: {x: +value.x, y: +value.y}
                     };
             }

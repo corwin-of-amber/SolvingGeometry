@@ -38,7 +38,7 @@ def samples_index():
 
 @app.route("/compile", methods=["POST"])
 def compile_request():
-    data = request.data #json.loads(request.data)
+    data = str(request.data, 'utf-8')
 
     import parser
     statements = parser.parse_free_text(data)
@@ -51,7 +51,7 @@ def compile_request():
 
 @app.route("/solve", methods=["POST"])
 def solve_request():
-    data = request.data #json.loads(request.data)
+    data = str(request.data, 'utf-8')
 
     print("TODO invoke solver on data", data)
 
