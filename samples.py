@@ -106,7 +106,7 @@ SAMPLES = {
              #"dist(E,D,x) & dist(E,F,x)",
              "?(D)", "?(E)", "?(F)","?(G)"
              ],
-    'tut:middle-1': # This is where I got so far (it doesnt work)
+    'tut:middle-1':
             ["segment(A,B,AB)", "in(E,AB)", "dist(A,E,a)",
             "dist(E,B,a)", "segment(B,C,BC)", "in(D,BC)",
             "dist(B,D,b)", "dist(D,C,b)",
@@ -132,5 +132,20 @@ SAMPLES = {
             # & [!=](AB,CD)",
            "segment(E,F,EF)", "in(P,EF)", # & [!=](AB,EF) & [!=](CD,EF)",
            "A=Point(0,0)", "B=Point(5, 0)",
-           "?(C)", "?(D)", "?(E)", "?(F)", "?(P)"]
+           "?(C)", "?(D)", "?(E)", "?(F)", "?(P)"],
+           
+     'SAT:right-tri-circd': [
+        "circle(O,75,R) & in(A,R) & in(B,R) & in(C,R)",
+        "A!=B & A!=C & B!=C",
+       "segment(A,C,AC) & in(O,AC)",
+       "dist(B,O,75) & dist(A,B,75)",
+       "O=Point(0,0) & ?(A,B,C,R)"],
+       
+     'SAT:tri2/5': [
+        "angle(P,S,R)=90", "angle(S,R,Q)=90",
+       "angle(R,Q,P)=90",
+       "angle(Q,P,S)=90",
+       "segment(P,S,PS) & in(T,PS)",
+       "dist(P,S,d) & dist(P,T,k) & prod(5,r,2) & prod(r,d,k)",
+       "P=Point(0,0) & known(S) & (?)(R,Q,T)"], #TODO: What is S?????
 }
