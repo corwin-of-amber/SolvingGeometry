@@ -39,7 +39,7 @@ def get_number_as_var(num):
         numbers[num] = new_var
         return new_var
     
-POSSIBLE_PREDICATES = ["segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "intersect2segmentsQ", "realnot",  "neq", "output"]
+POSSIBLE_PREDICATES = ["circle", "segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "intersect2segmentsQ", "realnot",  "neq", "output"]
 
 
 class ParsingException(Exception):
@@ -81,6 +81,12 @@ class Statement:
 
 # Api for Statement
 # All functions gets strings as parameters
+def circle(o, r, id):
+    # Circle centered at o with radius r
+    if is_number(r):
+        r = get_number_as_var(r)
+    return Statement("Circle", vars=[o, r, id])
+
 def segment(a, b, name_of_segment):
     return Statement("Segment", vars=[a, b, name_of_segment])
 

@@ -56,7 +56,7 @@ class Exercise:
                 for var in s.vars:
                     if var not in self.known_symbols and var not in self.output_vars and var not in self.other_vars:
                         self.other_vars.append(var)
-
+        
     def _write_dl(self, statements):
         # Create dl file inside souffle_in_dir folder
         # Create relevant variables from statements
@@ -79,6 +79,9 @@ class Exercise:
             else:
                 line_to_write = predicate + str(s.vars) + ".\n"
                 f.write(line_to_write.replace("'", "\""))
+            if (predicate in relations) and (predicate != "Known"):
+                # Save fact in relation.facts. Send s.vars[:-1] because assume last var is the id
+                relations[predicate].save_new_fact(s.vars[:-1], is_new=False)
         f.close()
         
     def build_exercise_from_dl(self, dl_file, output_vars, known_symbols):
@@ -125,21 +128,7 @@ class Relation:
         f = open(r_out_path, "r")
         csv_reader = csv.reader(f, delimiter="\t")
         for row in csv_reader:
-            # Create new fact
-            new_fact = Fact(self, row)
-            # Check if we have already seen this object
-            #TODO: Maybe there is a better way (like comparing the id)
-            if new_fact in self.facts:
-                continue
-            if self.should_delete_symmetry:
-                # Don't add this fact if the symmetric fact has already been added
-                a, b = row
-                symmetric_fact = Fact(self, [b, a])
-                if symmetric_fact in self.facts:
-                    continue
-            is_new_object = True
-            self.facts.append(new_fact)
-        
+            is_new_object = self.save_new_fact(row)
         f.close()
         return is_new_object
 
@@ -180,6 +169,27 @@ class Relation:
         is_new_object = self._find_new_facts()
         self._write_new_facts()
         return is_new_object
+        
+    def save_new_fact(self, fact_params, is_new=True):
+        # Get a new fact, add it to facts list if it's not there yet. Return true if it was added, false otherwise
+        # Fact isn't new if it comes from the input (because if fact is new we should create it in the .facts file)
+        # TODO: maybe use make function in order to write dl
+        fact_params = list(fact_params)
+        new_fact = Fact(self, fact_params)                    
+        # Check if we have already seen this object
+        #TODO: Maybe there is a better way (like comparing the id)
+        if new_fact in self.facts:
+            return False
+        if self.should_delete_symmetry:
+            # Don't add this fact if the symmetric fact has already been added
+            a, b = fact_params
+            symmetric_fact = Fact(self, [b, a])
+            if symmetric_fact in self.facts:
+                return False
+        new_fact.is_new = is_new
+        self.facts.append(new_fact)
+        
+        return True
 
 
 class Fact:
@@ -349,12 +359,15 @@ def produce_constraint_helper(statement, known_symbols):
     # Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
     # Notice this function can return None for certain predicates
     predicate = statement.predicate.lower()
-    if predicate == "segment":
+    if predicate == "circle":
+        # TODO: Make sure
         return
-    if predicate == "middle":
+    elif predicate == "segment":
+        return
+    elif predicate == "middle":
         # This predicate will produe the rule: 
         # dist(middle(A, B), O)
-        return ("dist(middle({}, {}), {})").format(*statement.vars)
+        return "assert", ("dist(middle({}, {}), {})").format(*statement.vars)
     elif predicate == "rightangle":
         return "assert", ("angle({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
     elif predicate == "rightangleccw":
@@ -686,7 +699,6 @@ def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=
         exercise = Exercise(exercise_name)
         assert(len(statements) > 0)
         exercise.build_exercise_from_statements(statements)
-        
     # Note: symbols is a dict we should get from the front
     partial_prog.produce_known(exercise.known_symbols)
     deductive_synthesis(exercise, partial_prog, statements)
