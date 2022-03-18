@@ -1,0 +1,9 @@
+div.editor-container {
+    background: white;
+    color: black;
+    overflow: auto;
+}
+
+div.editor-container > .cm-editor {
+    height: 100%;
+}

@@ -1,7 +1,13 @@
 from flask import Flask, Response, request, jsonify, send_from_directory
+import json
+from serialization import json_custom
 
-app = Flask(__name__)
-Port = 8000
+
+HOST = 'localhost'
+PORT = 8000
+UI_BUILD_DIR = "../UI/build"
+
+app = Flask(__name__, static_url_path="/", static_folder=UI_BUILD_DIR)
 
 def create_response(status_code:int) -> Response:
 
@@ -20,6 +26,38 @@ def create_response(status_code:int) -> Response:
 
 
 
+
+@app.route('/')
+def index():
+    return send_from_directory(UI_BUILD_DIR, 'index.html')
+
+@app.route("/samples")
+def samples_index():
+    import samples
+    return json.dumps(samples.SAMPLES)
+
+@app.route("/compile", methods=["POST"])
+def compile_request():
+    data = request.data #json.loads(request.data)
+
+    import parser
+    statements = parser.parse_free_text(data)
+    for s in statements:
+        print(s)
+
+    result = {"statements": statements}
+
+    return json_custom(result)
+
+@app.route("/solve", methods=["POST"])
+def solve_request():
+    data = request.data #json.loads(request.data)
+
+    print("TODO invoke solver on data", data)
+
+    result = {}
+
+    return json_custom(result)
 
 
 # @app.route('/add_reply/', methods=['GET'])
@@ -57,38 +95,9 @@ def create_response(status_code:int) -> Response:
 
 # ---------------------------static functions--------------------------------#
 
-@app.route('/')
-def index():
-    return send_from_directory('build', 'index.html')
-
-
-@app.route('/static/css/<file>/')
-def send_css(file):
-    return send_from_directory('build/static/css', file)
-
-
-@app.route('/static/js/<file>/')
-def send_js(file):
-    return send_from_directory('build/static/js', file)
-
-
-@app.route('/static/media/<file>/')
-def send_media(file):
-    return send_from_directory('build/static/media', file)
-
-
-@app.route('/manifest.json')
-def send_manifest():
-    return send_from_directory('build', 'manifest.json')
-
-
-@app.route('/favicon.ico')
-def send_favicon():
-    return send_from_directory('build', 'favicon.ico')
-
 
 if __name__ == '__main__':
-    app.run(debug=True, port=Port)
+    app.run(debug=True, port=PORT, host=HOST)
 
 
 
