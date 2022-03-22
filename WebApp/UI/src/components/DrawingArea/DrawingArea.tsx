@@ -105,11 +105,13 @@ class DrawingAreaGesture {
 
 
 class PointDragGesture {
+    svg: SVGSVGElement
     start: PointXY
     initial: LabeledPoint
     hook: (pt: LabeledPoint) => void
 
-    constructor(start: PointXY, initial: LabeledPoint, hook: (pt: LabeledPoint) => void) {
+    constructor(svg: SVGSVGElement, start: PointXY, initial: LabeledPoint, hook: (pt: LabeledPoint) => void) {
+        this.svg = svg;
         this.start = start;
         this.initial = initial;
         this.hook = hook;
@@ -121,13 +123,14 @@ class PointDragGesture {
             (ev.target as Element).setPointerCapture(ev.pointerId);
             ev.stopPropagation();
             return new PointDragGesture(
+                drawingArea.svg.current!,
                 {x: ev.clientX, y: ev.clientY}, 
                 pt, drawingArea.props.onMovePoint!);
         }
     }
 
     move(ev: React.PointerEvent, label: string) {
-        let delta = {x: ev.clientX - this.start.x, y: ev.clientY - this.start.y},
+        let delta = scaleDOMToSVG(this.svg, {x: ev.clientX - this.start.x, y: ev.clientY - this.start.y}),
             o = this.initial;
         this.hook({label: o.label, at: {x: o.at.x + delta.x, y: o.at.y - delta.y}});
     }
@@ -145,6 +148,13 @@ type DrawingAreaProps = {
 };
 
 type PointXY = {x: number, y: number}
+
+/* auxiliary function for translating coordinates when zoomed in or out */
+function scaleDOMToSVG(svg: SVGSVGElement, xy: PointXY) {
+    var matrix = svg.getCTM();
+    assert(matrix);
+    return {x: xy.x / matrix.a, y: xy.y / matrix.d};
+}
 
 
 export { DrawingArea }

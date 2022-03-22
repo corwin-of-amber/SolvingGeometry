@@ -1,11 +1,37 @@
 import assert from 'assert';
 import _ from 'lodash';
 import Flatten from '@flatten-js/core';
-import type { LabeledPoint } from './components/DrawingArea/Shapes';
+import type { LabeledPoint } from '../components/DrawingArea/Shapes';
 
 
 class MiniInterp {
+    prog: Expr<MiniProgram>
+
+    constructor(prog: Expr<MiniProgram>) {
+        this.prog = prog;
+    }
+
     eval(inputPoints: PointSet) {
+        var known = this._import(inputPoints);
+        try {
+            var prog = this.prog(known);
+        }
+        catch (e) {
+            if (e instanceof MiniProgram.MissingInputs)
+                return known;
+            else throw e;
+        }
+
+        var candidates = this._compile(prog.stmts)(known)
+                .map(env => ({values: env, err: prog.objfunc(env)}));
+        var minimal = _.minBy(candidates, oc => oc.err);
+
+        assert(minimal);
+
+        return this._export(minimal.values);
+    }
+
+    peval(inputPoints: PointSet) {
         var known = this._import(inputPoints);
 
         if (['X', 'Z'].every(k => inputPoints[k])) {
@@ -23,21 +49,22 @@ class MiniInterp {
             var a = known['A'], b = known['B'], dist = a.distanceTo(b)[0];
                 
 
-            let prog: Instruction[] = [
-                [1, 'C', (env: Env) => 
-                            this._searchOnCircleAroundPoint_maybe(
-                                Flatten.circle(env['B'], dist), env['C'])],
-                [0, 'D', (env: Env) =>
-                            Flatten.circle(env['C'], dist)
-                                .intersect(Flatten.circle(env['A'], dist))]
-            ];
-            let objective = (pts: Env) =>
-                (pts.D.distanceTo(pts.A)[0] < 1 ? 10 : 0) + // penalty
-                (pts.D.distanceTo(pts.B)[0] < 1 ? 10 : 0) + // penalty
-                Math.abs(pts.A.distanceTo(pts.C)[0] - pts.B.distanceTo(pts.D)[0]);
+            let prog = new MiniProgram([
+                    [1, 'C', (env: Env) => 
+                                SearchRange.circleAroundPoint_maybe(
+                                    Flatten.circle(env['B'], dist), env['C'])],
+                    [0, 'D', (env: Env) =>
+                                Flatten.circle(env['C'], dist)
+                                    .intersect(Flatten.circle(env['A'], dist))]
+                ],
+                (pts: Env) =>
+                    (pts.D.distanceTo(pts.A)[0] < 1 ? 10 : 0) + // penalty
+                    (pts.D.distanceTo(pts.B)[0] < 1 ? 10 : 0) + // penalty
+                    Math.abs(pts.A.distanceTo(pts.C)[0] - pts.B.distanceTo(pts.D)[0])
+            );
         
-            var candidates = this._compile(prog)(known)
-                    .map(env => ({values: env, err: objective(env)}));
+            var candidates = this._compile(prog.stmts)(known)
+                    .map(env => ({values: env, err: prog.objfunc(env)}));
             var minimal = _.minBy(candidates, oc => oc.err);
 
             assert(minimal);
@@ -53,23 +80,6 @@ class MiniInterp {
 
     _export(ps: PointSet<Flatten.Point>): PointSet {
         return mapValues(ps, v => ({x: v.x, y: v.y}));
-    }
-
-    _searchOnCircle(c: Flatten.Circle): SearchRange<Flatten.Point> {
-        let p0 = new Flatten.Point(c.pc.x + c.r, c.pc.y);
-        return {lo: 0, hi: 2 * Math.PI,
-            construct: (angle: number) => p0.rotate(angle, c.pc)}
-    }
-
-    _searchOnCircleAroundPoint(c: Flatten.Circle, pt: Flatten.Point): SearchRange<Flatten.Point> {
-        let p0 = new Flatten.Point(c.pc.x + c.r, c.pc.y),
-            around = new Flatten.Vector(c.pc, pt).slope;
-        return {lo: around - 0.5, hi: around + 0.5,
-            construct: (angle: number) => p0.rotate(angle, c.pc)}
-    }
-
-    _searchOnCircleAroundPoint_maybe(c: Flatten.Circle, pt?: Flatten.Point): SearchRange<Flatten.Point> {
-        return pt ? this._searchOnCircleAroundPoint(c, pt) : this._searchOnCircle(c);
     }
 
     _slice(sr: SearchRange<Flatten.Point>, nSlices: number = 1000) {
@@ -133,12 +143,49 @@ namespace PointSet {
 
 type SearchRange<T> = {lo: number, hi: number, construct: (p: number) => T}
 
+namespace SearchRange {
+
+    export function circle(c: Flatten.Circle): SearchRange<Flatten.Point> {
+        let p0 = new Flatten.Point(c.pc.x + c.r, c.pc.y);
+        return {lo: 0, hi: 2 * Math.PI,
+            construct: (angle: number) => p0.rotate(angle, c.pc)}
+    }
+
+    export function circleAroundPoint(c: Flatten.Circle, pt: Flatten.Point): SearchRange<Flatten.Point> {
+        let p0 = new Flatten.Point(c.pc.x + c.r, c.pc.y),
+            around = new Flatten.Vector(c.pc, pt).slope;
+        return {lo: around - 0.5, hi: around + 0.5,
+            construct: (angle: number) => p0.rotate(angle, c.pc)}
+    }
+
+    export function circleAroundPoint_maybe(c: Flatten.Circle, pt?: Flatten.Point): SearchRange<Flatten.Point> {
+        return pt ? circleAroundPoint(c, pt) : circle(c);
+    }
+
+}
+
 type Env = PointSet<Flatten.Point>
 type Locus0 = Flatten.Point[]
 type Locus1 = SearchRange<Flatten.Point>
-type Expr<Locus> = (env: Env) => Locus
+type Expr<Ty> = (env: Env) => Ty
 
 type Instruction = [0, string, Expr<Locus0>] | [1, string, Expr<Locus1>]
+type ObjectiveFunction = Expr<number>
+
+class MiniProgram {
+    constructor(public stmts: Instruction[],
+        public objfunc: ObjectiveFunction) { }
+}
+
+type _Env = Env;
+type _Expr<Ty> = Expr<Ty>;
+
+namespace MiniProgram {
+    export type Env = _Env;
+    export type Expr<Ty> = _Expr<Ty>;
+
+    export class MissingInputs { }
+}
 
 
-export { MiniInterp, PointSet }
+export { MiniInterp, PointSet, SearchRange, MiniProgram }
