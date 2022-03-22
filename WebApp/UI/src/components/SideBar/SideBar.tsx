@@ -89,6 +89,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
                         at: {x: +value.x, y: +value.y}
                     };
             }
+            return undefined;
         }).filter(x => x) as LabeledPoint[];
         console.log(pts);
         this.props.onShapesReceived?.({points: pts});

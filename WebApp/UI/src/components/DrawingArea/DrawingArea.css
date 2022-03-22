@@ -23,6 +23,10 @@ g.diagram g.labeledPoint circle {
     stroke: rgb(168 47 176);
 }
 
+g.diagram g.labeledPoint.mobile circle:hover {
+    stroke-width: 3px;
+}
+
 g.diagram g.labeledPoint text {
     text-anchor: end;
     dominant-baseline: middle;

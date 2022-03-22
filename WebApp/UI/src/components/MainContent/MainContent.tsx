@@ -3,22 +3,44 @@ import './MainContent.css';
 import { DrawingArea } from '../DrawingArea/DrawingArea';
 import { SideBar } from '../SideBar/SideBar';
 import { Shapes, LabeledPoint } from '../DrawingArea/Shapes';
+import { MiniInterp, PointSet } from '../../mini-solve';
 
 
-export const MainContent = () => {
-    
-    var [points, setPoints] = React.useState<LabeledPoint[]>([]);
+class MainContent extends React.Component<{}, MainContentState> {
 
-    const handleShapesReceived = (shapes: Shapes) => {
-        if (shapes.points) setPoints(shapes.points);
+    constructor(props: {}) {
+        super(props);
+        this.state = {
+            points: []
+        };
     }
 
-    return (
-        
-        <div className="main-content-container">
-            <SideBar onShapesReceived={handleShapesReceived}/>
-            <DrawingArea points={points}/>
-        </div>
-        
-    )
+    solveAndSetPoints(points: LabeledPoint[]) {
+        var interp = new MiniInterp(), pointset = PointSet.fromLabeledPoints(points),
+            sol = interp.eval(pointset);
+        this.setState({points: PointSet.toLabeledPoints({...pointset, ...sol})});
+    }
+
+    handleShapesReceived = (shapes: Shapes) => {
+        if (shapes.points) this.solveAndSetPoints(shapes.points);
+    }
+
+    onMovePoint = (pt: LabeledPoint) => {
+        this.solveAndSetPoints(this.state.points.map(lpt => pt.label === lpt.label ? pt : lpt));
+    }
+
+    render() {
+        return (            
+            <div className="main-content-container">
+                <SideBar onShapesReceived={this.handleShapesReceived}/>
+                <DrawingArea points={this.state.points} onMovePoint={this.onMovePoint}/>
+            </div>
+        )
+    }
 }
+
+
+type MainContentState = {points: LabeledPoint[]}
+
+
+export { MainContent }
