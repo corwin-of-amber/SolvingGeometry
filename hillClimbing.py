@@ -359,4 +359,4 @@ def hillClimbing(known, rules, not_equal, not_in, not_collinear, not_intersect_2
                 known[k] = Point(known[k].x.round(3), known[k].y.round(3))
             global_rules = []
     print("*****************************************************")
-    print(known)
+    return known
