@@ -39,7 +39,7 @@ def get_number_as_var(num):
         numbers[num] = new_var
         return new_var
     
-POSSIBLE_PREDICATES = ["circle", "segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "intersect2segmentsQ", "realnot",  "neq", "output"]
+POSSIBLE_PREDICATES = ["circle", "segment",  "middle", "angle","angleCcw", "angleCw", "notColinear","dist", "in", "known", "notIn", "intersect2segmentsQ", "realnot",  "neq", "output", "drawCircle", "drawSegment"]
 
 
 class ParsingException(Exception):
@@ -155,6 +155,11 @@ def neq(a, b):
 def output(var):
     return Statement("output", vars=[var])
 
+def drawCircle(point_name, radius):
+    return Statement("drawCircle", vars=[point_name, radius])
+
+def drawSegment(point_a, point_b):
+    return Statement("drawSegment", vars=[point_a, point_b])
 
 # Parser functions (some of them are obsolete)
 
@@ -270,7 +275,6 @@ def parse_func_call(match):
     # Get a match from scanString that matches a function call. Parse it and return relevant Statement
     func_name = match.func_name
     args = match.args.asList()
-
     if match.neg:
         func_name = "not{}".format(func_name[0].upper() + func_name[1:])
     # Make sure predicate is valid
@@ -336,6 +340,10 @@ def parse_free_text(input_text):
     # Add variables that were casted from numbers as Known statements
     for numeric_val, var_name in numbers.items():
         statements.append(known(var_name, numeric_val))
+    print("statements are: ")
+    for s in statements:
+        print(s)
+    print()
     return statements
     
 def get_exercise(exercise_name=None):

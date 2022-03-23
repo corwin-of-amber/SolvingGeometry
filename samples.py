@@ -26,6 +26,8 @@ SAMPLES = {
                "angle(A,D,C)=90",
                "A=Point(0,0)",
                "B=Point(1,0)",
+               "drawSegment(A, B) & drawSegment(B, C)",
+               "drawSegment(C, D) & drawSegment(A, D)",
                "?(C)",
                "?(D)"
     ],

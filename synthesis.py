@@ -28,6 +28,9 @@ class Exercise:
         self._write_dl(statements)
         # Add variables to known and output vars
         for s in statements:
+            if s.predicate.startswith("draw"):
+                # Draw statements are meant only for the front, not for the deductive part
+                continue
             if s.predicate == "known":
                 var_name = s.vars[0]
                 var_val = s.vars[1]
@@ -65,6 +68,9 @@ class Exercise:
         f = open(self.dl_file, "w")
         f.write("#include <GeometryRules.dl>\n")
         for s in statements:
+            if s.predicate.startswith("draw"):
+                # Draw statements are meant only for the front, not for the deductive part
+                continue
             # Notice if there is a predicate that has only 1 var - it should be handled seperatly
             predicate = s.predicate[0].upper() + s.predicate[1:]
             if s.predicate == "known":
@@ -359,6 +365,9 @@ def produce_constraint_helper(statement, known_symbols):
     # Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
     # Notice this function can return None for certain predicates
     predicate = statement.predicate.lower()
+    if predicate.startswith("draw"):
+        # Draw predicates are only meant for the front
+        return
     if predicate == "circle":
         # TODO: Make sure
         return
