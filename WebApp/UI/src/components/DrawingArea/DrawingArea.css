@@ -14,13 +14,19 @@ g.grid path.axis {
 }
 
 g.grid path.tick {
+    vector-effect: non-scaling-stroke;
     stroke: #ddf;
 }
 
 g.diagram g.labeledPoint circle {
+    vector-effect: non-scaling-stroke;
     r: 4px;
     fill: rgb(255, 0, 140);
     stroke: rgb(168 47 176);
+}
+
+g.diagram g.labeledPoint.mobile circle:hover {
+    stroke-width: 3px;
 }
 
 g.diagram g.labeledPoint text {

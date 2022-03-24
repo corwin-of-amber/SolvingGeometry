@@ -67,16 +67,76 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
     renderPoints(points: LabeledPoint[] = []) {
         var ofs = this.labelOffset;
         return points.map(({label, at: {x, y}}) =>
-            <g key={label} className="labeledPoint">
+            <g key={label} className="labeledPoint mobile"
+                        onPointerDownCapture={ev => this.pointDrag.start(ev, label)}
+                        onPointerMove={ev => this.pointDrag.move(ev, label)}
+                        onPointerUp={ev => this.pointDrag.end(ev, label)}>
                 {['stroked', 'fore'].map(cs =>
-                    <text key={cs} className={cs} x={x + ofs.x} y={y + ofs.y}>{label}</text>)}
-                <circle cx={x} cy={y}/>
+                    <text key={cs} className={cs} x={x + ofs.x} y={-y + ofs.y}>{label}</text>)}
+                <circle cx={x} cy={-y}/>
             </g>);
     }
 
+    pointDrag = new DrawingAreaGesture(this)
+
     _mkticks(from: number, to: number, sep: number) {
         return new Array(Math.floor((to - from) / sep)).fill(0)
-            .map((_,i) => from + (i + 1) * sep).filter(x => x != 0);
+            .map((_,i) => from + (i + 1) * sep).filter(x => x !== 0);
+    }
+}
+
+
+class DrawingAreaGesture {
+    active?: PointDragGesture
+
+    constructor(private drawingArea: DrawingArea) { }
+
+    start(ev: React.PointerEvent, label: string) {
+        this.active = PointDragGesture.start(ev, label, this.drawingArea);
+    }
+    move(ev: React.PointerEvent, label: string) {
+        this.active?.move(ev, label);
+    }
+    end(ev: React.PointerEvent, label: string) {
+        this.active?.end(ev, label);
+        this.active = undefined;
+    }
+}
+
+
+class PointDragGesture {
+    svg: SVGSVGElement
+    start: PointXY
+    initial: LabeledPoint
+    hook: (pt: LabeledPoint) => void
+
+    constructor(svg: SVGSVGElement, start: PointXY, initial: LabeledPoint, hook: (pt: LabeledPoint) => void) {
+        this.svg = svg;
+        this.start = start;
+        this.initial = initial;
+        this.hook = hook;
+    }
+
+    static start(ev: React.PointerEvent, label: string, drawingArea: DrawingArea) {
+        let pt = drawingArea.props.points?.find(pt => pt.label === label);
+        if (pt) {
+            (ev.target as Element).setPointerCapture(ev.pointerId);
+            ev.stopPropagation();
+            return new PointDragGesture(
+                drawingArea.svg.current!,
+                {x: ev.clientX, y: ev.clientY}, 
+                pt, drawingArea.props.onMovePoint!);
+        }
+    }
+
+    move(ev: React.PointerEvent, label: string) {
+        let delta = scaleDOMToSVG(this.svg, {x: ev.clientX - this.start.x, y: ev.clientY - this.start.y}),
+            o = this.initial;
+        this.hook({label: o.label, at: {x: o.at.x + delta.x, y: o.at.y - delta.y}});
+    }
+
+    end(ev: React.PointerEvent, label: string) {
+        (ev.target as Element).releasePointerCapture(ev.pointerId);
     }
 }
 
@@ -84,7 +144,17 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
 type DrawingAreaProps = {
     ticksep?: number
     points?: LabeledPoint[]
+    onMovePoint?: (pt: LabeledPoint) => void
 };
+
+type PointXY = {x: number, y: number}
+
+/* auxiliary function for translating coordinates when zoomed in or out */
+function scaleDOMToSVG(svg: SVGSVGElement, xy: PointXY) {
+    var matrix = svg.getCTM();
+    assert(matrix);
+    return {x: xy.x / matrix.a, y: xy.y / matrix.d};
+}
 
 
 export { DrawingArea }

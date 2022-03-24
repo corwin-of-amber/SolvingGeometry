@@ -29,7 +29,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
     editor = React.createRef<Editor>()
     listOfSamples = React.createRef<ListOfSamples>()
 
-    readonly DEFAULT_SAMPLE = "triangle"
+    readonly DEFAULT_SAMPLE = "square"
 
     constructor(props: {}) {
         super(props);
@@ -51,6 +51,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         console.log('compile', this.state.userRules);
         var compiled = await this.compileText(this.state.userRules);
         this.setState({parsedInput: compiled.statements});
+        this.props.onCompiled?.(compiled.statements);
         this.extractPoints(compiled.statements);
     }
 
@@ -68,11 +69,13 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
 
     openSample(name: string) {
         var sample = this.state.samples[name];
-        if (sample)
+        if (sample) {
             this.editor.current?.open(sample.join('\n'));
+            this.props.onOpened?.(name, sample);
+        }
     }
 
-    async compileText(programText: string) {
+    async compileText(programText: string): Promise<{statements: Statement[]}> {
         var r = await fetch('/compile', {method: 'POST', body: programText});
         if (!r.ok) throw r;
         return await r.json();
@@ -89,6 +92,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
                         at: {x: +value.x, y: +value.y}
                     };
             }
+            return undefined;
         }).filter(x => x) as LabeledPoint[];
         console.log(pts);
         this.props.onShapesReceived?.({points: pts});
@@ -149,6 +153,8 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
 }
 
 type SideBarProps = {
+    onOpened?: (name: string, defs: any) => void
+    onCompiled?: (statements: Statement[]) => void
     onShapesReceived?: (shapes: Shapes) => void
 }
 
