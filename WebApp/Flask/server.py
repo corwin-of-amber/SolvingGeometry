@@ -56,10 +56,10 @@ def _get_points_coordinates(point_name, all_points):
     assert(point_name in all_points)
     return all_points[point_name]
 
-def get_output(input_text, exercise_name="SQUARE"):
+def get_output(input_text):
     # Get input from the user, return the partial program, the output points and output lines\rays\segments
     statements = parser.parse_free_text(input_text)
-    partial_prog = synthesis.main(exercise_name=exercise_name, statements=statements)
+    partial_prog = synthesis.main(statements=statements)
     # print("Partial program is: ")
     # print(partial_prog)
     # print("Perform numeric search")
