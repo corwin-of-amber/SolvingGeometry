@@ -1,5 +1,6 @@
 import assert from 'assert';
 import React from 'react';
+import Flatten from '@flatten-js/core';
 import { Pan, Zoom } from '../../infra/ui-pan-zoom';
 import { LabeledPoint, Segment } from './Shapes';
 import './DrawingArea.css';
@@ -79,9 +80,9 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
     }
 
     renderSegments(segments: Segment[] = []) {
-        return segments.map(({start, end}) =>
-            <line key={start.x.toString()+'_'+start.y.toString()+'_'+end.x.toString()+'_'+end.y.toString()} x1={start.x} y1={-start.y} x2={end.x} y2={-end.y} stroke="black" />
-        )
+        return segments.map(({start, end}, idx) =>
+            <line key={idx} x1={start.x} y1={-start.y} x2={end.x} y2={-end.y}/>
+        );
     }
 
     pointDrag = new DrawingAreaGesture(this)

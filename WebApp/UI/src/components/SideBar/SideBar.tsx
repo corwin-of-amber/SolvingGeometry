@@ -29,7 +29,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
     editor = React.createRef<Editor>()
     listOfSamples = React.createRef<ListOfSamples>()
 
-    readonly DEFAULT_SAMPLE = "square"
+    readonly DEFAULT_SAMPLE = "square-in-square"
 
     constructor(props: {}) {
         super(props);

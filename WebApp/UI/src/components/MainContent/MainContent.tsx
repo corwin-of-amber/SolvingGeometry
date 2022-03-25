@@ -1,4 +1,5 @@
 import React from 'react';
+import Flatten from '@flatten-js/core';
 import './MainContent.css';
 import { DrawingArea } from '../DrawingArea/DrawingArea';
 import { SideBar } from '../SideBar/SideBar';
@@ -19,13 +20,14 @@ class MainContent extends React.Component<{}, MainContentState> {
         };
     }
 
-    solveAndSetPoints(points: LabeledPoint[]) {
+    solveAndSetPoints(points: LabeledPoint[], shapes: Flatten.Shape[] = []) {
         if (this.interp) {
             var pointset = PointSet.fromLabeledPoints(points),
                 sol = this.interp.eval(pointset);
-            points = PointSet.toLabeledPoints(sol);
+            points = PointSet.toLabeledPoints(sol.points);
+            shapes = sol.shapes;
         }
-        //empty the segment
+        /** @todo add segments from solution */
         let segments: Segment[] = []
         this.setState({points, segments});
     }
@@ -59,7 +61,10 @@ class MainContent extends React.Component<{}, MainContentState> {
 }
 
 
-type MainContentState = {points: LabeledPoint[], segments: Segment[]}
+type MainContentState = {
+    points: LabeledPoint[]
+    segments: Segment[]
+}
 
 
 export { MainContent }
