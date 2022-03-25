@@ -195,7 +195,7 @@ def solveHillClimbing(rule_index, known):
     rule = global_rules[rule_index]
     current_known = copy.deepcopy(known)
     if rule_index == 0: #assert with only 0-dimensions
-        print("in assert with rule = ", rule, "and known = ", known)
+        #print("in assert with rule = ", rule, "and known = ", known)
         eval_value = abs(eval(rule[1], {**PRIMITIVES, **current_known}))
         return eval_value, current_known
     current_index = rule_index - 1
@@ -203,11 +203,11 @@ def solveHillClimbing(rule_index, known):
         current_known[rule[1]] = eval(rule[2], {**PRIMITIVES, **current_known})
         return solveHillClimbing(current_index, current_known)
     if len(rule[2]) == 1:
-        print("in dimension 1 with rule = ", rule, "and known = ", known)
+        #print("in dimension 1 with rule = ", rule, "and known = ", known)
         if "orth" not in rule[2][0]:
             domain = get_domain(eval(rule[2][0], {**PRIMITIVES, **current_known}))
             def objfunc(p):
-                print("in objefunc with p:", p, "and known:", known)
+                #print("in objefunc with p:", p, "and known:", known)
                 # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
                 known_dup = known
                 known_dup[rule[1]] = p
@@ -223,7 +223,7 @@ def solveHillClimbing(rule_index, known):
             new_rule2 = rule[2][0].replace("orth", "rotateCcw")
             domain2 = get_domain(eval(new_rule2, {**PRIMITIVES, **current_known}))
             def objfunc1(p):
-                print("in objefunc with p:",p,"and known:",known)
+                #print("in objefunc with p:",p,"and known:",known)
                 # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
                 known_dup = known
                 known_dup[rule[1]] = p
@@ -231,7 +231,7 @@ def solveHillClimbing(rule_index, known):
                 return res
             solution1 = minimize(lambda v: abs(objfunc1(domain1(*v))), 0.0, method="Nelder-Mead")
             def objfunc2(p):
-                print("in objefunc with p:",p,"and known:",known)
+                #print("in objefunc with p:",p,"and known:",known)
                 # known_dup = copy.deepcopy(current_known) #TODO: is it ok to not deep copy here?
                 known_dup = known
                 known_dup[rule[1]] = p
@@ -248,7 +248,7 @@ def solveHillClimbing(rule_index, known):
                 return solution2.fun, current_known
 
     else: #dimension == 0
-        print("in dimension 0 with rule = ", rule, "and known = ", known)
+        #print("in dimension 0 with rule = ", rule, "and known = ", known)
         eval_res_list = [[]]
         for i in range(len(rule[2])):
             if "orth" in rule[2][i]:
@@ -265,7 +265,7 @@ def solveHillClimbing(rule_index, known):
         min_ret = float('inf')
         min_rule_res = None
         for intersection_res in intersection_res_list:
-            print("with p = ", intersection_res)
+            #print("with p = ", intersection_res)
             if len(intersection_res) == 0:
                 continue
             if len(intersection_res) == 1:
@@ -358,5 +358,5 @@ def hillClimbing(known, rules, not_equal, not_in, not_collinear, not_intersect_2
                     continue
                 known[k] = Point(known[k].x.round(3), known[k].y.round(3))
             global_rules = []
-    print("*****************************************************")
+    #print("*****************************************************")
     return known
