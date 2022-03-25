@@ -85,7 +85,7 @@ SAMPLES = {
            "angle(E,F,G)=90",
            "angle(F,G,H)=90",
            "angle(G,H,E)=90",
-           "A=Point(0,5)", "B=Point(120,0)","?(C)", "?(D)"
+           "A=Point(-60,5)", "B=Point(60,-4)","?(C)", "?(D)"
            "?(E, F, G, H)"
            ],
    "square-in-triangle":
