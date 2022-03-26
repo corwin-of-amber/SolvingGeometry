@@ -25,7 +25,7 @@ SAMPLES = {
                "B!=D",
                "angle(A,D,C)=90",
                "A=Point(0,0)",
-               "B=Point(1,0)",
+               "B=Point(100,0)",
                "drawSegment(A, B) & drawSegment(B, C)",
                "drawSegment(C, D) & drawSegment(A, D)",
                "?(C)",
@@ -85,7 +85,7 @@ SAMPLES = {
            "angle(E,F,G)=90",
            "angle(F,G,H)=90",
            "angle(G,H,E)=90",
-           "A=Point(0,0)", "B=Point(60,0)","?(C)", "?(D)"
+           "A=Point(-60,5)", "B=Point(60,-4)","?(C)", "?(D)"
            "?(E, F, G, H)"
            ],
    "square-in-triangle":

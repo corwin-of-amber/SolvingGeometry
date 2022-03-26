@@ -1,7 +1,7 @@
 import assert from 'assert';
 import React from 'react';
 import { Pan, Zoom } from '../../infra/ui-pan-zoom';
-import { LabeledPoint } from './Shapes';
+import { LabeledPoint, Segment } from './Shapes';
 import './DrawingArea.css';
 
 
@@ -27,6 +27,7 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
                 <svg ref={this.svg} xmlns="http://www.w3.org/2000/svg" viewBox="-1000 -1000 2000 2000">
                     {this.renderGrid()}
                     <g className="diagram">
+                        {/* {this.renderSegments(this.props.segments)} */}
                         {this.renderPoints(this.props.points)}
                     </g>
                 </svg>
@@ -75,6 +76,12 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
                     <text key={cs} className={cs} x={x + ofs.x} y={-y + ofs.y}>{label}</text>)}
                 <circle cx={x} cy={-y}/>
             </g>);
+    }
+
+    renderSegments(segments: Segment[] = []) {
+        return segments.map(({start, end}) =>
+            <line key={start.x.toString()+'_'+start.y.toString()+'_'+end.x.toString()+'_'+end.y.toString()} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="black" />
+        )
     }
 
     pointDrag = new DrawingAreaGesture(this)
@@ -144,6 +151,7 @@ class PointDragGesture {
 type DrawingAreaProps = {
     ticksep?: number
     points?: LabeledPoint[]
+    segments?: Segment[],
     onMovePoint?: (pt: LabeledPoint) => void
 };
 

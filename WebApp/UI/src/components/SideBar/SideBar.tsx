@@ -9,7 +9,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import Tooltip from '@mui/material/Tooltip';
 import { Editor } from '../Editor/Editor'; 
 import { ListOfSamples } from '../ListOfSamples/ListOfSamples';
-import { LabeledPoint, Shapes } from '../DrawingArea/Shapes';
+import { LabeledPoint, Shapes, Segment, PointXY } from '../DrawingArea/Shapes';
 
 
 function renderRow(props: ListChildComponentProps) {
@@ -55,9 +55,49 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         this.extractPoints(compiled.statements);
     }
 
-    handleSolve = () => {
+    handleSolve = async () => {
         console.log('solve', this.state.userRules);
+        var solution = await this.solveText(this.state.userRules);
+        console.log(solution);
+        this.parseSolutionPartialProg(solution[0]);
+
+        let points: LabeledPoint[] = []
+        const points_keys = Object.keys(solution[1]);
+        points_keys.forEach((key, index) => {
+            let at:PointXY = {x: Number(solution[1][key][0]), y: Number(solution[1][key][1])}
+            let p:LabeledPoint = {label: key, at: at};
+            points.push(p);
+        });
+
+        console.log(points);
+        
+        let segments = solution[2].map((seg: string[]) => {
+            let start:PointXY = {x: Number(seg[0]), y:Number(seg[1])};
+            let end:PointXY = {x: Number(seg[2]), y:Number(seg[3])};
+            return {
+                start,
+                end
+            };
+        }).filter((x: object) => x) as Segment[];
+
+        console.log(segments);
+
+        this.props.onSolve?.(points, segments);
     }
+
+    parseSolutionPartialProg = (solution:string) => {
+        let only_rules = solution.substring(solution.indexOf("rules")+8, solution.indexOf("not_equal")-5);
+        console.log(only_rules);
+        const final_list = only_rules.split("],\n").map(rawrule => rawrule.substring(2));
+        console.log(final_list);
+        this.setState({progSteps: final_list});
+    }
+
+
+    // parseSolutionPoints = (obj: any) => {
+    //     obj.map(pt => pt);
+        
+    // }
 
     async getSamples() {
         const samples = await (await fetch('/samples')).json();
@@ -77,6 +117,12 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
 
     async compileText(programText: string): Promise<{statements: Statement[]}> {
         var r = await fetch('/compile', {method: 'POST', body: programText});
+        if (!r.ok) throw r;
+        return await r.json();
+    }
+
+    async solveText(programText: string): Promise<any> {
+        var r = await fetch('/solve', {method: 'POST', body: programText});
         if (!r.ok) throw r;
         return await r.json();
     }
@@ -105,7 +151,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
     }
 
     render() {
-        let items = this.state.parsedInput;
+        let items = this.state.progSteps;
 
         return (
             <div className='sidebar'>
@@ -156,6 +202,7 @@ type SideBarProps = {
     onOpened?: (name: string, defs: any) => void
     onCompiled?: (statements: Statement[]) => void
     onShapesReceived?: (shapes: Shapes) => void
+    onSolve?: (points: LabeledPoint[], segments: Segment[]) => void
 }
 
 type SideBarState = {

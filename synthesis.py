@@ -197,6 +197,9 @@ class Relation:
         
         return True
 
+    def clear(self):
+        self.facts = []
+
 
 class Fact:
     def __init__(self, relation, params, is_new=True):
@@ -344,7 +347,7 @@ def get_reason(symbol_name):
                 
         f.close()
     # If couldn't find a predicate - than this is a leaves
-    raise AssertionError("Couldnt find apply rule for: " + str(locus_name))
+    raise AssertionError(f"Couldnt find apply rule for '{symbol_name}'")
     
 
 def is_leave(term):
@@ -522,7 +525,13 @@ class PartialProg:
         out_str += "not_intersect_2_segments= "
         out_str += str(self.not_intersect_2_segments) + "\n"
         return out_str
-    
+
+# This function resets the state of the deductive synthesis solver in preparation
+# for a fresh execution
+def reset_solver():
+    for rel in relations.values():
+        rel.clear()
+
 # The function  emits a known fact for the best var possible, in order to run the deductive part again
 def emit_known_fact(var):
     print("Emit: {} to known  facts".format(var))
@@ -700,6 +709,7 @@ def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=
         else:
             exercise_name = "tmp"
     
+    reset_solver()
     define_souffle_vars(exercise_name)
     create_folder()
     

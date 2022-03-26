@@ -255,13 +255,13 @@ def parse_free_text_old(input_text):
 def parser():
     # TODO: How to handle an error (a predicate that isn't in the possible predicates)?
     func_name = pp.oneOf(POSSIBLE_PREDICATES)("func_name")
-    arg = pp.Word(pp.alphanums)
+    arg = pp.Word(pp.alphanums) | pp.Combine("-" + pp.Word(pp.nums))
     args = (pp.Suppress("(") + pp.Optional(pp.delimitedList(arg, delim=",")) + pp.Suppress(")"))("args")
     func = func_name + args
     
     neg = pp.Literal("!")("neg")
     eq = pp.Literal("=")("eq")
-    val = pp.Word(pp.alphanums)("val")
+    val = (pp.Word(pp.alphanums) | pp.Combine("-" + pp.Word(pp.nums)))("val")
     var = pp.Word(pp.srange("[a-zA-Z_]"), pp.srange("[a-zA-Z0-9]"))("var")
     
     point = pp.Keyword("Point")("point")
