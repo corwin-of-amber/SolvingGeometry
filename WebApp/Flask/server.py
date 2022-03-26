@@ -81,7 +81,7 @@ def get_output(input_text):
         if s.predicate == "drawSegment":
             # Format for segment: (a.x, a.y, b.x, b.y)
             point_a = s.vars[0]
-            point_b = s.vars[0]
+            point_b = s.vars[1]
             segment_ab = (*_get_points_coordinates(point_a, out_points), 
             *_get_points_coordinates(point_b, out_points))
             out_lines.append(segment_ab)
@@ -98,7 +98,9 @@ def get_output(input_text):
 @app.route("/solve", methods=["POST"])
 def solve_request():
     data = str(request.data, 'utf-8')
-    return json_custom(get_output(data))
+    out = get_output(data)
+    print(out)
+    return json_custom(out)
 
 
 if __name__ == '__main__':

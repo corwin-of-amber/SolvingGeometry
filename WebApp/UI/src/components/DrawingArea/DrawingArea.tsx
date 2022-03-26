@@ -27,7 +27,7 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
                 <svg ref={this.svg} xmlns="http://www.w3.org/2000/svg" viewBox="-1000 -1000 2000 2000">
                     {this.renderGrid()}
                     <g className="diagram">
-                        {/* {this.renderSegments(this.props.segments)} */}
+                        {this.renderSegments(this.props.segments)}
                         {this.renderPoints(this.props.points)}
                     </g>
                 </svg>
@@ -80,7 +80,7 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
 
     renderSegments(segments: Segment[] = []) {
         return segments.map(({start, end}) =>
-            <line key={start.x.toString()+'_'+start.y.toString()+'_'+end.x.toString()+'_'+end.y.toString()} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="black" />
+            <line key={start.x.toString()+'_'+start.y.toString()+'_'+end.x.toString()+'_'+end.y.toString()} x1={start.x} y1={-start.y} x2={end.x} y2={-end.y} stroke="black" />
         )
     }
 
