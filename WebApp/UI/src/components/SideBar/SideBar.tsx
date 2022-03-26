@@ -57,6 +57,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
 
     handleSolve = async () => {
         console.log('solve', this.state.userRules);
+        this.setState({progSteps: []});
         var solution = await this.solveText(this.state.userRules);
         console.log(solution);
         this.parseSolutionPartialProg(solution[0]);
@@ -64,7 +65,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         let points: LabeledPoint[] = []
         const points_keys = Object.keys(solution[1]);
         points_keys.forEach((key, index) => {
-            let at:PointXY = {x: Number(solution[1][key][0]), y: Number(solution[1][key][1])}
+            let at:PointXY = {x: eval(solution[1][key][0]), y: eval(solution[1][key][1])}
             let p:LabeledPoint = {label: key, at: at};
             points.push(p);
         });
@@ -72,8 +73,8 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         console.log(points);
         
         let segments = solution[2].map((seg: string[]) => {
-            let start:PointXY = {x: Number(seg[0]), y:Number(seg[1])};
-            let end:PointXY = {x: Number(seg[2]), y:Number(seg[3])};
+            let start:PointXY = {x: eval(seg[0]), y:eval(seg[1])};
+            let end:PointXY = {x: eval(seg[2]), y:eval(seg[3])};
             return {
                 start,
                 end
@@ -93,11 +94,6 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         this.setState({progSteps: final_list});
     }
 
-
-    // parseSolutionPoints = (obj: any) => {
-    //     obj.map(pt => pt);
-        
-    // }
 
     async getSamples() {
         const samples = await (await fetch('/samples')).json();
