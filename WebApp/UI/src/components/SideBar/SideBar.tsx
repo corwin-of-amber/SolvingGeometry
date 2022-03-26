@@ -38,7 +38,8 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
             samples: {},
             sampleNames: [],
             parsedInput: [],
-            progSteps: []
+            progSteps: [],
+            fetching: false
         };
     }
 
@@ -57,8 +58,19 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
 
     handleSolve = async () => {
         console.log('solve', this.state.userRules);
-        this.setState({progSteps: []});
-        var solution = await this.solveText(this.state.userRules);
+        this.setState({fetching: true});
+        this.setState({progSteps: ['Solving...']});
+
+        try {
+            var solution = await this.solveText(this.state.userRules);
+        } catch (error) {
+            this.setState({fetching: false});
+            this.setState({progSteps: []});
+            alert("There is a problem with the input");
+            return;
+        }
+          
+        
         console.log(solution);
         this.parseSolutionPartialProg(solution[0]);
 
@@ -84,6 +96,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         console.log(segments);
 
         this.props.onSolve?.(points, segments);
+        this.setState({fetching: false});
     }
 
     parseSolutionPartialProg = (solution:string) => {
@@ -156,7 +169,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
                         Problem Constraints
                         <ListOfSamples ref={this.listOfSamples}
                             sampleNames={this.state.sampleNames}
-                            onSelect={name => this.openSample(name)}/>
+                            onSelect={name => this.openSample(name)} disabled={this.state.fetching}/>
                     </h3>
                     <Editor ref={this.editor} onChange={this.handleChange}/>
                     <div className='solve-buttons'>
@@ -206,7 +219,8 @@ type SideBarState = {
     samples: {[name: string]: any}
     sampleNames: string[]
     parsedInput: any[],
-    progSteps: any[]
+    progSteps: any[],
+    fetching: boolean
 }
 
 type Statement = {predicate: string, vars: any[]}

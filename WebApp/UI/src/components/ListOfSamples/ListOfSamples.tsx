@@ -19,11 +19,11 @@ export class ListOfSamples extends React.Component<ListOfSamplesProps> {
 
     render() {
         return (
-            <select ref={this.el} onChange={this.handleChange}>
+            <select ref={this.el} onChange={this.handleChange} disabled={this.props.disabled}>
                 {this.props.sampleNames.map((name: string) => <option key={name} value={name}>{name}</option>)}
             </select>
         );
     }
 }
 
-type ListOfSamplesProps = { sampleNames: string[], onSelect?: (name: string) => void };
+type ListOfSamplesProps = { sampleNames: string[], onSelect?: (name: string) => void, disabled?: boolean};
