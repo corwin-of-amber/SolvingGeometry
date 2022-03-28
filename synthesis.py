@@ -236,7 +236,7 @@ relations = {
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
 
 def run_souffle(souffle_script):
-    os.system("souffle -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(
+    os.system("souffle -w -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(
     souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
 
 # Functions to parse the results of the deduction
