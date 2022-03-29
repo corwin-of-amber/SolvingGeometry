@@ -294,10 +294,7 @@ def best_known_locus_for_each_var(vars):
         res = get_best_known_locus(loci)
         if res:
             best_locus, best_dim = res
-            print(var + " is inside this locus: " + best_locus + ", from dim: " + str(best_dim))
             locus_per_var[var] = (best_locus, best_dim)
-        else:
-            print("Couldn't find a locus for " + var)
     return locus_per_var
 
 def get_best_output_var(locus_per_var):
@@ -534,7 +531,6 @@ def reset_solver():
 
 # The function  emits a known fact for the best var possible, in order to run the deductive part again
 def emit_known_fact(var):
-    print("Emit: {} to known  facts".format(var))
     f = open(os.path.join(souffle_in_dir, "Known.facts"), "a")
     csv_writer = csv.writer(f, delimiter="\t")
     csv_writer.writerow([var])
@@ -556,7 +552,6 @@ def deductive_synthesis_iteration(souffle_script):
     is_new_object = True
     while is_new_object:
         is_new_object = False
-        print("Running souffle...")
         run_souffle(souffle_script)
         for rel in make_relations:
             if rel.make():
@@ -638,9 +633,6 @@ def deductive_synthesis(exercise, partial_prog, statements):
                             known_symbols=known_symbols,
                             var=var)
         if not new_known_vars:
-            print("remaining output vars are: ")
-            for var in output_vars:
-                print(var)
             # In this case there is no way to progress
             raise AssertionError("Not found output var with known location")
 
@@ -661,14 +653,7 @@ def deductive_synthesis(exercise, partial_prog, statements):
                     partial_prog=partial_prog,
                     exercise=exercise,
                     statements=statements, known_symbols=known_symbols)
-    statements = [s for s in statements if not s.is_ready(known_symbols)]
-    print("Search completed")
-    if statements:
-        print("Note: the remaining statements")
-        for s in statements:
-            print(s)
-    print()
-    
+    statements = [s for s in statements if not s.is_ready(known_symbols)]    
 
 # Functions to prepare for the deduction part
 
