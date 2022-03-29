@@ -14,21 +14,7 @@ UI_BUILD_DIR = "../UI/build"
 
 app = Flask(__name__, static_url_path="/", static_folder=UI_BUILD_DIR)
 
-def create_response(status_code:int) -> Response:
-
-    status_text_dict = {
-        200:"OK",
-        204: "No Content",
-        302: "Found",
-        401:"Unauthorized",
-        404:"not found",
-        409:"conflict",
-        500:"internal server error"
-    }
-    status_text = status_text_dict[status_code]
-
-    return Response(status_text,status_code)
-
+SolutionResponse = namedtuple("output", "partial_prog output_points output_lines")
 
 
 
@@ -56,12 +42,28 @@ def _get_points_coordinates(point_name, all_points):
     assert(point_name in all_points)
     return all_points[point_name]
 
-def get_output(input_text):
-    # Get input from the user, return the partial program, the output points and output lines\rays\segments
+def memoize_one(func):
+    memo = {}
+    def decorated(arg):
+        try:
+            return memo[arg]
+        except KeyError:
+            memo.clear()   # save at most one result
+            memo[arg] = res = func(arg)
+            return res
+    return decorated
+
+@memoize_one
+def synthesize(input_text):
     statements = parser.parse_free_text(input_text)
     partial_prog = synthesis.main(statements=statements)
-    # print("Partial program is: ")
-    # print(partial_prog)
+    return statements, partial_prog
+
+def synthesize_and_solve(input_text):
+    # Get input from the user, return the partial program, the output points and output lines\rays\segments
+    statements, partial_prog = synthesize(input_text)
+    print("Partial program is: ")
+    print(partial_prog)
     # print("Perform numeric search")
     results = hillClimbing.hillClimbing(partial_prog.known, partial_prog.rules, not_equal=partial_prog.not_equal_rules, not_in=partial_prog.not_in_rules, not_collinear=partial_prog.not_colinear, not_intersect_2_segments=partial_prog.not_intersect_2_segments)
     # print("numeric search results are: ")
@@ -92,13 +94,19 @@ def get_output(input_text):
             circle_a = (*_get_points_coordinates(point_a, out_points), radius)
             out_lines.append(circle_a)
     
-    output = namedtuple("output", "partial_prog output_points output_lines")
-    return output(str(partial_prog), out_points, out_lines)
+    return SolutionResponse(str(partial_prog), out_points, out_lines)
+
+@app.route("/presolve", methods=["POST"])
+def presolve_request():
+    data = str(request.data, 'utf-8')
+    statements, partial_prog = synthesize(data)
+    out = SolutionResponse(partial_prog.rules, [], [])
+    return json_custom(out)
 
 @app.route("/solve", methods=["POST"])
 def solve_request():
     data = str(request.data, 'utf-8')
-    out = get_output(data)
+    out = synthesize_and_solve(data)
     print(out)
     return json_custom(out)
 

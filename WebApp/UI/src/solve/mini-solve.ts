@@ -11,19 +11,22 @@ class MiniInterp {
         this.prog = prog;
     }
 
-    eval(inputPoints: PointSet) {
+    eval(inputPoints: PointSet): MiniProgram.Solution {
         var known = this._import(inputPoints);
         try {
             var prog = this.prog(known);
         }
         catch (e) {
             if (e instanceof MiniProgram.MissingInputs)
-                return known;
+                return {points: inputPoints, shapes: []};
             else throw e;
         }
 
-
-        return this._export(this.solve(prog, known)[0]);
+        var points = this.solve(prog, known)[0];
+        return {
+            points: this._export(points),
+            shapes: this.getShapes(prog, points)
+        };
     }
 
     solve(prog: MiniProgram, env: Env) {
@@ -34,6 +37,11 @@ class MiniInterp {
         assert(minimal);
 
         return [minimal.values];
+    }
+
+    getShapes(prog: MiniProgram, env: Env) {
+        return _.flatten([...this._extractDirectives(prog.stmts, env)]
+            .map(({draw}) => draw(env)));
     }
 
     _import(ps: PointSet): PointSet<Flatten.Point> {
@@ -67,24 +75,42 @@ class MiniInterp {
 
     _ret() { return (env: Env) => [env]; }
 
-    _compile(instructions: (Instruction | Continuation)[]): (env: Env) => Env[] {
+    _compile(instructions: (Instruction | Directive | Continuation)[]): (env: Env) => Env[] {
         if (instructions.length === 0) return this._ret();
         else {
-            var insn = instructions[0], rest = instructions.slice(1);
+            var insn = instructions[0], rest = instructions.slice(1),
+                next = this._compile(rest);
             if (insn instanceof Function) {
-                var finsn = insn as Function, cont = this._compile(rest);
+                var finsn = insn as Continuation;
                 return env => _.flatten(this.solve(finsn(env), env)
-                               .map(env => cont(env)));
+                               .map(next));
             }
-            else {
+            else if (Array.isArray(insn)) {
                 switch (insn[0]) {
                 case 0:
-                    return this._bind0(insn[1], insn[2], this._compile(rest));
+                    return this._bind0(insn[1], insn[2], next);
                 case 1:
-                    return this._bind1(insn[1], insn[2], this._compile(rest));
+                    return this._bind1(insn[1], insn[2], next);
                 default:
                     assert(false);
                 }
+            }
+            else {
+                // side effect - skip for now, handled by `_extractDirectives`
+                return next;
+            }
+        }
+    }
+
+    *_extractDirectives(instructions: (Instruction | Directive | Continuation)[], env: Env): Generator<Directive> {
+        for (let insn of instructions) {
+            if (insn instanceof Function) {
+                var finsn = insn as Continuation;
+                for (let insn of this._extractDirectives(finsn(env).stmts, env))
+                    yield insn;
+            }
+            else if (typeof insn === 'object' && !Array.isArray(insn)) {
+                yield insn;
             }
         }
     }
@@ -157,11 +183,12 @@ type Locus1 = SearchRange<Flatten.Point>
 type Expr<Ty> = (env: Env) => Ty
 
 type Instruction = [0, string, Expr<Locus0>] | [1, string, Expr<Locus1>]
+type Directive = {draw: Expr<Flatten.Shape[]>}
 type Continuation = Expr<MiniProgram>
 type ObjectiveFunction = Expr<number>
 
 class MiniProgram {
-    constructor(public stmts: (Instruction | Continuation)[],
+    constructor(public stmts: (Instruction | Directive | Continuation)[],
         public objfunc: ObjectiveFunction) { }
 }
 
@@ -171,6 +198,11 @@ type _Expr<Ty> = Expr<Ty>;
 namespace MiniProgram {
     export type Env = _Env;
     export type Expr<Ty> = _Expr<Ty>;
+
+    export type Solution = {
+        points: PointSet,
+        shapes: Flatten.Shape[]
+    }
 
     export class MissingInputs { }
 }

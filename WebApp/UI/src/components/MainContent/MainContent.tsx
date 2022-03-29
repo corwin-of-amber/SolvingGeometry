@@ -1,4 +1,5 @@
 import React from 'react';
+import Flatten from '@flatten-js/core';
 import './MainContent.css';
 import { DrawingArea } from '../DrawingArea/DrawingArea';
 import { SideBar } from '../SideBar/SideBar';
@@ -19,15 +20,17 @@ class MainContent extends React.Component<{}, MainContentState> {
         };
     }
 
-    solveAndSetPoints(points: LabeledPoint[]) {
+    solveAndSetPoints(points: LabeledPoint[], shapes: Flatten.Shape[] = []) {
+        let segments: Segment[] = [];
         if (this.interp) {
             var pointset = PointSet.fromLabeledPoints(points),
                 sol = this.interp.eval(pointset);
-            points = PointSet.toLabeledPoints(sol);
+            points = PointSet.toLabeledPoints(sol.points);
+            shapes = sol.shapes;
+            segments = (sol.shapes.filter(s => s instanceof Flatten.Segment) as Flatten.Segment[])
+                        .map((s: Flatten.Segment) => ({start: s.ps, end: s.pe}));
+            this.setState({points, segments});
         }
-        //empty the segment
-        let segments: Segment[] = []
-        this.setState({points, segments});
     }
 
     handleGeometricSolution = (points: LabeledPoint[], segments: Segment[]) => {
@@ -41,7 +44,6 @@ class MainContent extends React.Component<{}, MainContentState> {
     onOpened = (name: string, defs: any) => {
         var mock = MOCK_PROGRAMS[name];
         this.interp = mock ? new MiniInterp(mock) : undefined;
-        console.log(this.interp);
     }
 
     onMovePoint = (pt: LabeledPoint) => {
@@ -59,7 +61,10 @@ class MainContent extends React.Component<{}, MainContentState> {
 }
 
 
-type MainContentState = {points: LabeledPoint[], segments: Segment[]}
+type MainContentState = {
+    points: LabeledPoint[]
+    segments: Segment[]
+}
 
 
 export { MainContent }

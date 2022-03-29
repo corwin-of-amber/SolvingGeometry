@@ -15,10 +15,25 @@ import { LabeledPoint, Shapes, Segment, PointXY } from '../DrawingArea/Shapes';
 function renderRow(props: ListChildComponentProps) {
     const { index, style } = props;
   
+    function sym(sym: string) {
+        return (sym === ':in') ? ":\u2208" : sym;
+    }
+
+    function renderRule(rule: string | any[]) {
+        if (typeof rule === 'string') return rule;  // e.g. 'Solving...'
+        try {
+            if (rule[0] === 'assert')
+                return <span><b>assert</b> {rule[1]}</span>;
+            else
+                return `${rule[1]} ${sym(rule[0])} ${rule.slice(2).map(x => `${x}`).join(' ')}`;
+        }
+        catch (e) { console.error(e); return "???"; }
+    }
+
     return (
       <ListItem style={style} key={index} component="div" disablePadding>
         <ListItemButton>
-            <ListItemText primary={JSON.stringify(props.data[index])}></ListItemText>
+            {renderRule(props.data[index])}
         </ListItemButton>
       </ListItem>
     );
@@ -29,7 +44,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
     editor = React.createRef<Editor>()
     listOfSamples = React.createRef<ListOfSamples>()
 
-    readonly DEFAULT_SAMPLE = "square"
+    readonly DEFAULT_SAMPLE = "triangle"
 
     constructor(props: {}) {
         super(props);
@@ -62,21 +77,31 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         this.setState({progSteps: ['Solving...']});
 
         try {
-            var solution = await this.solveText(this.state.userRules);
+            var response = await this.presolveText(this.state.userRules);
         } catch (error) {
             this.setState({fetching: false});
-            this.setState({progSteps: []});
-            alert("There is a problem with the input");
+            this.setState({progSteps: ['Error!']});
             return;
         }
           
         
-        console.log(solution);
-        this.parseSolutionPartialProg(solution[0]);
+        console.log(response);
+        this.parseSolutionPartialProg(response[0]);
+
+        try {
+            var solution = await this.solveText(this.state.userRules);
+        }
+        catch (error) {
+            this.setState({fetching: false});
+            console.error(error);
+            window.alert('oops! internal error occurred.');
+            return;
+        }
 
         let points: LabeledPoint[] = []
         const points_keys = Object.keys(solution[1]);
         points_keys.forEach((key, index) => {
+            /** @oops `eval` is needed because numbers are fractions */
             let at:PointXY = {x: eval(solution[1][key][0]), y: eval(solution[1][key][1])}
             let p:LabeledPoint = {label: key, at: at};
             points.push(p);
@@ -99,12 +124,8 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         this.setState({fetching: false});
     }
 
-    parseSolutionPartialProg = (solution:string) => {
-        let only_rules = solution.substring(solution.indexOf("rules")+8, solution.indexOf("not_equal")-5);
-        console.log(only_rules);
-        const final_list = only_rules.split("],\n").map(rawrule => rawrule.substring(2));
-        console.log(final_list);
-        this.setState({progSteps: final_list});
+    parseSolutionPartialProg = (solution: string[]) => {
+        this.setState({progSteps: solution});
     }
 
 
@@ -124,14 +145,18 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
         }
     }
 
-    async compileText(programText: string): Promise<{statements: Statement[]}> {
-        var r = await fetch('/compile', {method: 'POST', body: programText});
-        if (!r.ok) throw r;
-        return await r.json();
+    compileText(programText: string): Promise<{statements: Statement[]}> {
+        return this.postText('/compile', programText);
+    }
+    presolveText(programText: string): Promise<ServerResponse> {
+        return this.postText('/presolve', programText);
+    }
+    solveText(programText: string): Promise<ServerResponse> {
+        return this.postText('/solve', programText);
     }
 
-    async solveText(programText: string): Promise<any> {
-        var r = await fetch('/solve', {method: 'POST', body: programText});
+    async postText(path: string, programText: string) {
+        var r = await fetch(path, {method: 'POST', body: programText});
         if (!r.ok) throw r;
         return await r.json();
     }
@@ -224,6 +249,7 @@ type SideBarState = {
 }
 
 type Statement = {predicate: string, vars: any[]}
+type ServerResponse = [string[], {[label: string]: [string, string]}, [string, string, string, string][]]
 
 
 export { SideBar }

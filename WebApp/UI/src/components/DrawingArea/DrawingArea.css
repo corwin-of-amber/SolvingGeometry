@@ -10,12 +10,16 @@
 }
 
 g.grid path.axis {
-    stroke: #999;
+    stroke: #99e;
 }
 
 g.grid path.tick {
     vector-effect: non-scaling-stroke;
     stroke: #ddf;
+}
+
+g.diagram line {
+    stroke: black;
 }
 
 g.diagram g.labeledPoint circle {
