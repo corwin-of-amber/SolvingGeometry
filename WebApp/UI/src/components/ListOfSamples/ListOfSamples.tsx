@@ -1,5 +1,5 @@
 import assert from 'assert';
-import React, { ChangeEvent, useState } from 'react';
+import React, { ChangeEvent } from 'react';
 
 
 export class ListOfSamples extends React.Component<ListOfSamplesProps> {

@@ -1,0 +1,12 @@
+{
+    "name": "algonquin-geom",
+    "version": "0.1.0",
+    "description": "Geometry Solver by CS Technion",
+    "scripts": {
+        "build": "cd WebApp/UI && npm run build",
+        "start": "PYTHONPATH=$PWD python WebApp/Flask/server.py",
+        "dev": "cd WebApp/UI && npm run start",
+        "serve:prod": "PYTHONPATH=$PWD:$PWD/WebApp/Flask uwsgi --http :8000 -w server:app",
+        "serve:prod+ssl": "PYTHONPATH=$PWD:$PWD/WebApp/Flask uwsgi --https :9090,ssl/plcs.cer,ssl/plcs.key -w server:app"
+    }
+}

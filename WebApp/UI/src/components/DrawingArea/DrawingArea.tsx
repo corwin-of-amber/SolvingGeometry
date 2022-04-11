@@ -1,6 +1,5 @@
 import assert from 'assert';
 import React from 'react';
-import Flatten from '@flatten-js/core';
 import { Pan, Zoom } from '../../infra/ui-pan-zoom';
 import { LabeledPoint, Segment } from './Shapes';
 import './DrawingArea.css';
@@ -37,7 +36,7 @@ class DrawingArea extends React.Component<DrawingAreaProps> {
     }
 
     componentDidMount() {
-        this.scrollCenter();
+        requestAnimationFrame(() => this.scrollCenter());
         this.panner = new Pan(this.div.current!);
         this.zoomer = new Zoom(this.div.current!);
         this.zoomer.setZoom = z =>
