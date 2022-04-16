@@ -69,7 +69,7 @@ def _get_points_coordinates(point_name, all_points):
     assert(point_name in all_points)
     return all_points[point_name]
 
-def get_output(input_text):
+def get_output(input_text, exercise_name):
     # Get input from the user, return the partial program, the output points and output lines\rays\segments
     statements = parser.parse_free_text(input_text)
     partial_prog = synthesis.main(exercise_name=exercise_name, statements=statements)
@@ -107,13 +107,22 @@ def get_output(input_text):
     
     output = namedtuple("output", "partial_prog output_points output_lines")
     return output(str(partial_prog), out_points, out_lines)
-  
-if __name__ == '__main__':
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("sample_name", metavar='SAMPLE-NAME', nargs='?', default='triangle')
+    args = parser.parse_args()
+
     print("In main")
-    exercise_name = "square"
+    exercise_name = args.sample_name
     input_text = samples.SAMPLES[exercise_name]
-    output = get_output(input_text)
-    print("Get output: ")
-    print(output)
-    print("partial prog: ")
-    print(output.partial_prog)
+    output = get_output(input_text, exercise_name)
+    print("\nSolution: ")
+    for k, v in output.output_points.items():
+        print(f"  {k}: {v}")
+
+
+if __name__ == '__main__':
+    main()
