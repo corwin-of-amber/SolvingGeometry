@@ -1,0 +1,674 @@
+{
+    "triangle": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":in",
+                    "Y",
+                    [
+                        "circle(Z, num_0)",
+                        "linevec((middle(X, Z)), (orth(vecFrom2Points(X, Z))))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(X, Y) - num_0) + abs(dist(Z, Y) - num_0)"
+                ]
+            ],
+            "solution": {
+                "X": [
+                    0.0,
+                    0.0
+                ],
+                "Z": [
+                    136.0,
+                    0.0
+                ],
+                "num_0": 136.0,
+                "Y": [
+                    68.0,
+                    -117.77900695800781
+                ]
+            }
+        },
+        "elapsed": 0.5381624160800129
+    },
+    "diamond": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":in",
+                    "Y",
+                    [
+                        "circle(Z, num_0)",
+                        "linevec((middle(X, Z)), (orth(vecFrom2Points(X, Z))))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "W",
+                    [
+                        "circle(Z, num_0)",
+                        "linevec((middle(Y, Z)), (orth(vecFrom2Points(Y, Z))))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(X, Y) - num_0) + abs(dist(Z, Y) - num_0) + abs(dist(W, Y) - num_0) + abs(dist(Z, W) - num_0)"
+                ]
+            ],
+            "solution": {
+                "X": [
+                    0.0,
+                    0.0
+                ],
+                "Z": [
+                    200.0,
+                    0.0
+                ],
+                "num_0": 200.0,
+                "Y": [
+                    100.0,
+                    -173.20498657226562
+                ],
+                "W": [
+                    300.0,
+                    -173.20498657226562
+                ]
+            }
+        },
+        "elapsed": 0.9204980419017375
+    },
+    "square": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":=",
+                    "d",
+                    "dist(A, B)"
+                ],
+                [
+                    "assert",
+                    "abs(dist(A, B) - d)"
+                ],
+                [
+                    ":in",
+                    "C",
+                    [
+                        "circle(B, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "D",
+                    [
+                        "circle(C, dist(A, B))",
+                        "linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(angle(A, D, C) - 0.5*pi)"
+                ]
+            ],
+            "solution": {
+                "A": [
+                    0.0,
+                    0.0
+                ],
+                "B": [
+                    100.0,
+                    0.0
+                ],
+                "d": 100.0,
+                "C": [
+                    100.0,
+                    100.0
+                ],
+                "D": [
+                    0.0,
+                    100.0
+                ]
+            }
+        },
+        "elapsed": 7.434225041186437
+    },
+    "square2": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":in",
+                    "C",
+                    [
+                        "circle(B, num_0)",
+                        "rayvec(B, orth(vecFrom2Points(B, A)))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(B, C) - num_0) + abs(angle(A, B, C) - 0.5*pi)"
+                ],
+                [
+                    ":in",
+                    "D",
+                    [
+                        "circle(C, num_0)"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(C, D) - num_0)"
+                ]
+            ],
+            "solution": {
+                "A": [
+                    0.0,
+                    0.0
+                ],
+                "B": [
+                    100.0,
+                    0.0
+                ],
+                "num_0": 100.0,
+                "C": [
+                    100.0,
+                    100.0
+                ],
+                "D": [
+                    200.0,
+                    100.0
+                ]
+            }
+        },
+        "elapsed": 1.1087612078990787
+    },
+    "pentagon": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":in",
+                    "B",
+                    [
+                        "linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))"
+                    ]
+                ],
+                [
+                    ":=",
+                    "d",
+                    "dist(A, B)"
+                ],
+                [
+                    ":=",
+                    "a",
+                    "angleCcw(A, B, C)"
+                ],
+                [
+                    ":in",
+                    "D",
+                    [
+                        "rayvec(C, rotateCcw(vecFrom2Points(C, B), angleCcw(A, B, C)))",
+                        "circle(C, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "E",
+                    [
+                        "rayvec(A, rotateCw(vecFrom2Points(A, B), angleCcw(A, B, C)))",
+                        "circle(A, dist(A, B))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(A, B) - d) + abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, E) - d) + abs(dist(E, A) - d) + abs(angleCcw(A, B, C) - a) + abs(angleCcw(B, C, D) - a) + abs(angleCcw(C, D, E) - a) + abs(angleCcw(D, E, A) - a) + abs(angleCcw(E, A, B) - a)"
+                ]
+            ],
+            "solution": {
+                "q": 0.0,
+                "A": [
+                    0.0,
+                    0.0
+                ],
+                "C": [
+                    200.0,
+                    0.0
+                ],
+                "B": [
+                    100.0,
+                    72.654052734375
+                ],
+                "d": 123.60682365630406,
+                "a": 1.8849550152117729,
+                "D": [
+                    161.80300903320312,
+                    -117.5570068359375
+                ],
+                "E": [
+                    38.197021484375,
+                    -117.5570068359375
+                ]
+            }
+        },
+        "elapsed": 36.46770487492904
+    },
+    "9gon": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":=",
+                    "d",
+                    "dist(A, B)"
+                ],
+                [
+                    "assert",
+                    "abs(dist(A, B) - d)"
+                ],
+                [
+                    ":in",
+                    "C",
+                    [
+                        "circle(B, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":=",
+                    "a",
+                    "angleCcw(A, B, C)"
+                ],
+                [
+                    ":in",
+                    "D",
+                    [
+                        "rayvec(C, rotateCcw(vecFrom2Points(C, B), angleCcw(A, B, C)))",
+                        "circle(C, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "E",
+                    [
+                        "rayvec(D, rotateCcw(vecFrom2Points(D, C), angleCcw(A, B, C)))",
+                        "circle(D, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "F",
+                    [
+                        "rayvec(E, rotateCcw(vecFrom2Points(E, D), angleCcw(A, B, C)))",
+                        "circle(E, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "G",
+                    [
+                        "rayvec(F, rotateCcw(vecFrom2Points(F, E), angleCcw(A, B, C)))",
+                        "circle(F, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "H",
+                    [
+                        "rayvec(G, rotateCcw(vecFrom2Points(G, F), angleCcw(A, B, C)))",
+                        "circle(G, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "I",
+                    [
+                        "rayvec(A, rotateCw(vecFrom2Points(A, B), angleCcw(A, B, C)))",
+                        "circle(A, dist(A, B))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, E) - d) + abs(dist(E, F) - d) + abs(dist(F, G) - d) + abs(dist(G, H) - d) + abs(dist(H, I) - d) + abs(dist(I, A) - d) + abs(angleCcw(A, B, C) - a) + abs(angleCcw(B, C, D) - a) + abs(angleCcw(C, D, E) - a) + abs(angleCcw(D, E, F) - a) + abs(angleCcw(E, F, G) - a) + abs(angleCcw(F, G, H) - a) + abs(angleCcw(G, H, I) - a) + abs(angleCcw(H, I, A) - a) + abs(angleCcw(I, A, B) - a)"
+                ]
+            ],
+            "solution": {
+                "A": [
+                    0.0,
+                    0.0
+                ],
+                "B": [
+                    100.0,
+                    100.0
+                ],
+                "q1": 0.0,
+                "q2": 0.0,
+                "d": 141.4213562373095,
+                "C": [
+                    240.88299560546875,
+                    112.32600402832031
+                ],
+                "a": 2.443461123234371,
+                "D": [
+                    356.72900390625,
+                    31.209991455078125
+                ],
+                "E": [
+                    393.33099365234375,
+                    -105.39300537109375
+                ],
+                "F": [
+                    333.56402587890625,
+                    -233.56399536132812
+                ],
+                "G": [
+                    205.39300537109375,
+                    -293.33099365234375
+                ],
+                "H": [
+                    68.7900390625,
+                    -256.72900390625
+                ],
+                "I": [
+                    -12.326004028320312,
+                    -140.88299560546875
+                ]
+            }
+        },
+        "elapsed": 277.35944716702215
+    },
+    "square-in-square": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":=",
+                    "d",
+                    "dist(A, B)"
+                ],
+                [
+                    ":=",
+                    "AB",
+                    "segment(A, B)"
+                ],
+                [
+                    ":in",
+                    "E",
+                    [
+                        "circle(A, num_0)",
+                        "rayvec(A, vecFrom2Points(A, B))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(dist(A, B) - d) + abs(dist(A, E) - num_0)"
+                ],
+                [
+                    ":in",
+                    "C",
+                    [
+                        "circle(B, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":=",
+                    "BC",
+                    "segment(B, C)"
+                ],
+                [
+                    ":in",
+                    "D",
+                    [
+                        "circle(C, dist(A, B))",
+                        "linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))"
+                    ]
+                ],
+                [
+                    ":=",
+                    "CD",
+                    "segment(C, D)"
+                ],
+                [
+                    ":=",
+                    "DA",
+                    "segment(D, A)"
+                ],
+                [
+                    "assert",
+                    "abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(angleCcw(A, D, C) - 0.5*pi)"
+                ],
+                [
+                    ":in",
+                    "F",
+                    [
+                        "rayvec(B, vecFrom2Points(B, C))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "G",
+                    [
+                        "rayvec(C, vecFrom2Points(C, D))",
+                        "rayvec(F, orth(vecFrom2Points(F, E)))"
+                    ]
+                ],
+                [
+                    ":in",
+                    "H",
+                    [
+                        "rayvec(D, vecFrom2Points(D, A))",
+                        "rayvec(G, orth(vecFrom2Points(G, F)))"
+                    ]
+                ],
+                [
+                    "assert",
+                    "abs(angle(E, F, G) - 0.5*pi) + abs(angle(F, G, H) - 0.5*pi) + abs(angle(G, H, E) - 0.5*pi)"
+                ]
+            ],
+            "solution": {
+                "A": [
+                    0.0,
+                    0.0
+                ],
+                "B": [
+                    200.0,
+                    -4.0
+                ],
+                "num_0": 100.0,
+                "d": 200.0399960007998,
+                "AB": [
+                    [
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        200.0,
+                        -4.0
+                    ]
+                ],
+                "E": [
+                    99.97998046875,
+                    -2.0
+                ],
+                "C": [
+                    204.0,
+                    196.0
+                ],
+                "BC": [
+                    [
+                        200.0,
+                        -4.0
+                    ],
+                    [
+                        204.0060638368572,
+                        195.999878631301
+                    ]
+                ],
+                "D": [
+                    4.0,
+                    200.0
+                ],
+                "CD": [
+                    [
+                        204.0060638368572,
+                        195.999878631301
+                    ],
+                    [
+                        4.006063836857205,
+                        199.99987863130073
+                    ]
+                ],
+                "DA": [
+                    [
+                        4.006063836857205,
+                        199.99987863130073
+                    ],
+                    [
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "F": [
+                    202.00399780273438,
+                    96.199951171875
+                ],
+                "G": [
+                    104.02000427246094,
+                    198.0
+                ],
+                "H": [
+                    1.996002197265625,
+                    99.800048828125
+                ]
+            }
+        },
+        "elapsed": 17.1078956250567
+    },
+    "tut:middle-1": {
+        "out": {
+            "partial_prog": [
+                [
+                    ":=",
+                    "E",
+                    "circleCenter(circleFromDiameter(segment(A, B)))"
+                ],
+                [
+                    ":=",
+                    "AB",
+                    "segment(A, B)"
+                ],
+                [
+                    ":=",
+                    "a",
+                    "dist(A, circleCenter(circleFromDiameter(segment(A, B))))"
+                ],
+                [
+                    ":=",
+                    "d",
+                    "dist(A, B)"
+                ],
+                [
+                    "assert",
+                    "abs(dist(A, E) - a) + abs(dist(E, B) - a) + abs(dist(A, B) - d)"
+                ],
+                [
+                    ":in",
+                    "C",
+                    [
+                        "circle(A, dist(A, B))"
+                    ]
+                ],
+                [
+                    ":=",
+                    "D",
+                    "circleCenter(circleFromDiameter(segment(B, C)))"
+                ],
+                [
+                    ":=",
+                    "F",
+                    "circleCenter(circleFromDiameter(segment(C, A)))"
+                ],
+                [
+                    ":=",
+                    "BC",
+                    "segment(B, C)"
+                ],
+                [
+                    ":=",
+                    "b",
+                    "dist(B, circleCenter(circleFromDiameter(segment(B, C))))"
+                ],
+                [
+                    ":=",
+                    "CA",
+                    "segment(C, A)"
+                ],
+                [
+                    ":=",
+                    "c",
+                    "dist(A, circleCenter(circleFromDiameter(segment(C, A))))"
+                ],
+                [
+                    "assert",
+                    "abs(dist(B, D) - b) + abs(dist(D, C) - b) + abs(dist(C, F) - c) + abs(dist(F, A) - c) + abs(dist(A, C) - d)"
+                ]
+            ],
+            "solution": {
+                "A": [
+                    100.0,
+                    100.0
+                ],
+                "B": [
+                    0.0,
+                    0.0
+                ],
+                "E": [
+                    50.0,
+                    50.0
+                ],
+                "AB": [
+                    [
+                        100.0,
+                        100.0
+                    ],
+                    [
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "a": 70.71067811865476,
+                "d": 141.4213562373095,
+                "C": [
+                    241.42098999023438,
+                    100.33299255371094
+                ],
+                "D": [
+                    120.71000671386719,
+                    50.1669921875
+                ],
+                "F": [
+                    170.70999145507812,
+                    100.16700744628906
+                ],
+                "BC": [
+                    [
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        241.42096367638,
+                        100.33321591204519
+                    ]
+                ],
+                "b": 130.71996396656965,
+                "CA": [
+                    [
+                        241.42096367638,
+                        100.33321591204519
+                    ],
+                    [
+                        100.0,
+                        100.0
+                    ]
+                ],
+                "c": 70.71067811865481
+            }
+        },
+        "elapsed": 1.7497814169619232
+    }
+}
