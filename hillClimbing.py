@@ -1,10 +1,16 @@
+import math
+from collections import namedtuple
+from functools import cache as memoize
+import itertools
+import copy
+
 import sympy
-from scipy.optimize import minimize
+from scipy.optimize import minimize, minimize_scalar
 from sympy import Ray, Point, Line, Segment, intersection, Circle, pi, cos, sin, sqrt, N
 # from sympy.abc import x, y
-import math
 from numpy import finfo, float32
-import copy
+
+import backend_shapely
 
 EPS = finfo(float32).eps
 global_rules = []
@@ -191,6 +197,218 @@ def handle_not_intersect_2_segments(current_known, main_var, intersection_res):
 
 
 
+def positional(arg_names, f):
+    arg_names = arg_names[:]
+    return lambda d: f(*(d[v] for v in arg_names))
+
+def solve_triangle(known):
+    #known = {'X': Point(0, 0), 'Z': Point(136, 0), 'num_0': 136}
+    rules=[
+        [':in', 'Y', ['circle(Z, num_0)', 'linevec((middle(X, Z)), (orth(vecFrom2Points(X, Z))))']],
+        ['assert', 'abs(dist(X, Y) - num_0) + abs(dist(Z, Y) - num_0)'],
+    ]
+
+    circle = Circle; linevec = lineVec
+
+    prog = [
+        [':in', 'Y', positional(['X', 'Z', 'num_0'],
+                     lambda X, Z, num_0: intersection(circle(Z, num_0), 
+                                                      linevec(middle(X, Z),
+                                                              rotateCw(vecFrom2Points(X, Z)))))]
+    ]
+    objfunc = positional(['X', 'Z', 'num_0', 'Y'],
+        lambda X, Z, num_0, Y: abs(dist(X, Y) - num_0) + abs(dist(Z, Y) - num_0))
+
+    sol = [(objfunc({**known, 'Y': Y}), {**known, 'Y': Y})
+            for Y in prog[0][2](known)]
+
+    print(sol)
+    return min(sol, key=lambda tup: tup[0])
+
+
+class Interp:
+    class Prog(namedtuple('Prog', 'statements')):
+        pass
+
+    def __init__(self, prog, inputs=[], backend=backend_shapely):
+        self.backend = backend
+        if not isinstance(prog, Interp.Prog):
+            prog = Interp.Prog(Eval(self.backend).compile(prog, inputs))
+        self.prog = prog
+
+    def __call__(self, known):
+        env = self._init(known)
+        return self._bind_stmts(self.prog.statements, None)(env)
+
+    def _init(self, known):
+        # @oops specific to shapely
+        from shapely.geometry import Point
+        return {k: Point(v.x, v.y) for k, v in known.items()}
+
+    def _bind0(self, key, locus_expr, cont):
+        def objfunc0(env):
+            domain = self._intersection(locus_expr(env))
+            if not domain: return (math.inf, env)
+            sol = [cont({**env, key: val}) for val in domain]
+            return min(sol, key=lambda tup: tup[0])
+        return objfunc0
+
+    def _bind1(self, key, locus_expr, cont):
+        def objfunc1(env):
+            domain = self.get_domain1(self._intersection(locus_expr(env)))
+            f = memoize(lambda t: cont({**env, key: domain(t)}))
+            sol_x = self.minimize(f)
+            return f(sol_x)
+        return objfunc1
+
+    def _ret(self, objfunc):
+        return lambda env: (objfunc(env), env)
+
+    def _bind_stmt(self, stmt, cont):
+        op = stmt[0]
+        if op == ':=':
+            _, key, expr = stmt
+            return self._bind0(key, lambda env: [expr(env)], cont)
+        elif op == ':in':
+            _, key, dim, expr = stmt
+            if dim == 0:  return self._bind0(key, expr, cont)
+            else:         return self._bind1(key, expr, cont)
+        elif op == 'assert':
+            _, expr = stmt
+            return self._ret(expr)  # note: needs to be last in block
+
+    def _bind_stmts(self, stmts, cont):
+        if stmts:
+            return self._bind_stmt(stmts[0], self._bind_stmts(stmts[1:], cont))
+        else:
+            return cont
+    
+    def _intersection(self, shapes):
+        from backend_shapely import intersection
+        if isinstance(shapes, list) and not isinstance(shapes[0], float):  # todo clean up this corner case
+            if len(shapes) == 1: return shapes[0]
+            else: return intersection(*shapes)
+        else:
+            return shapes
+
+    def get_domain0(self, shape):
+        return list(shape.geoms)
+
+    def get_domain1(self, shape):
+        # @oops this is specific to shapely
+        return lambda t: shape.interpolate(t)
+
+    def minimize(self, func):
+        return minimize(lambda t: abs(func(t[0])[0]), 5.0, method="Powell", tol=1e-9).x[0]
+        return minimize_scalar(lambda t: abs(func(t)[0]), tol=1e-9).x
+
+
+class Eval:
+    """
+    Handles compiling synthesized expressions into Python lambdas for
+    evaluation during solving.
+    """
+
+    def __init__(self, backend):
+        self.backend = backend
+        self.primitives = vars(backend)
+
+    def compile(self, prog, inputs=[]):
+        vardecls = inputs[:]
+        def expression(expr):
+            print(vardecls, expr)
+            return self._compile_func(vardecls, expr)
+        def statement(stmt):
+            op, expr = stmt[0], stmt[-1]
+            cexpr = expression(expr)
+            if op in [':=', ':in']:
+                vardecls.append(stmt[1])
+            if op == ':=':
+                return [*stmt[:-1], cexpr]
+            elif op == ':in':
+                dim = 0 if isinstance(expr, list) and len(expr) > 1 else 1  # heuristic
+                return [*stmt[:-1], dim, cexpr]
+            elif op == 'assert':
+                return [*stmt[:-1], self._add_funcs(cexpr, self.penalties)]
+            else:
+                raise NotImplementedError
+
+        return [statement(stmt) for stmt in prog]
+
+    def _compile_func(self, params, body):
+        if isinstance(body, list):
+            body = f"[{', '.join(body)}]"  # yuck
+        return positional(params, eval(f"lambda {','.join(params)}: {body}", self.primitives))
+
+    @classmethod
+    def _add_funcs(cls, *fs):
+        return lambda env: sum(f(env) for f in fs)
+
+    def penalties(self, env):
+        too_close = lambda a, b: self.backend.dist(a, b) < 10
+        points = [p for p in env.values() if isinstance(p, self.backend.Point)]
+        return sum(10 if too_close(p1, p2) else 0 for p1, p2 in itertools.combinations(points, 2))
+
+
+def solve_square(known, rules):
+    from backend_shapely import Point, dist, circle, linevec, intersection, orth, vecFrom2Points, middle, angle
+    import backend_shapely
+
+    #known = {'A': Point(0, 0), 'B': Point(100, 0)}
+
+    def compfunc(params, body):
+        if isinstance(body, list):
+            body = f"[{', '.join(body)}]"  # yuck
+        return positional(params, eval(f"lambda {','.join(params)}: {body}", vars(backend_shapely)))
+
+    def addfuncs(*fs):
+        return lambda env: sum(f(env) for f in fs)
+
+    rules_=[
+        [':=', 'd', 'dist(A, B)'],
+        #['assert', 'abs(dist(A, B) - d)'],
+        [':in', 'C', ['circle(B, dist(A, B))']],
+        [':in', 'D', ['circle(C, dist(A, B))', 'linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))']],
+        ['assert', 'abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(angle(A, D, C) - 0.5*pi)']
+    ]
+
+    del rules[1]
+
+    too_close = lambda a, b: dist(a, b) < 10
+    penalize = lambda env: sum(10 if a in env and b in env and too_close(env[a], env[b]) else 0
+                               #for a, b in [('B', 'D'), ('A', 'C')])
+                               for a in 'ABCD' for b in 'ABCD' if a < b)
+
+    prog = Interp.Prog(statements=[
+        [':=', 'd', compfunc(['A', 'B'], 'dist(A, B)')], #positional(['A', 'B'], lambda A, B: dist(A, B))],
+        [':in', 'C', 1, compfunc(['A', 'B', 'd'], 'circle(B, dist(A, B))')],
+        #positional(['A', 'B', 'd'],
+                        #lambda A, B, d: circle(B, dist(A, B)))],
+        [':in', 'D', 0, compfunc(['A', 'B', 'd', 'C'],
+            ['circle(C, dist(A, B))', 'linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))'])],
+        #positional(['A', 'B', 'd', 'C'],
+        #                lambda A, B, d, C: intersection(circle(C, dist(A, B)),
+        #                    linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))))],
+        ['assert', addfuncs(
+            compfunc(['A', 'B', 'd', 'C', 'D'], #'abs(angle(A, D, C) - 0.5*pi)'),
+            'abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(angle(A, D, C) - 0.5*pi) * 5'),
+            penalize)
+        ]
+        #positional(['A', 'B', 'd', 'C', 'D'],
+        #lambda A, B, d, C, D: abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(dist(A, C) - dist(B, D)) + abs(angle(A, D, C) - 0.5*math.pi)
+        #    + (10 if too_close(B, D) else 0)
+        #    + (10 if too_close(A, C) else 0))]
+    ])
+
+    #prog = Interp.Prog(statements=Eval(backend_shapely).compile(rules, ['A', 'B']))
+
+    interp = Interp(rules, inputs=['A', 'B'])
+
+    sol = interp(known)
+    print(sol)
+    return sol[1]
+
+
 def solveHillClimbing(rule_index, known):
     rule = global_rules[rule_index]
     current_known = copy.deepcopy(known)
@@ -232,7 +450,7 @@ def solveHillClimbing(rule_index, known):
         #print("in dimension 0 with rule = ", rule, "and known = ", known)
         eval_res_list = [[]]
         for i in range(len(rule[2])):
-            if "orth" in rule[2][i]:
+            if 0: #"orth" in rule[2][i]:
                 for j in range(len(eval_res_list)):
                     li = eval_res_list[j]
                     new_li = copy.deepcopy(li)
@@ -309,6 +527,7 @@ PRIMITIVES = {
     "vecOpNegate": vecOpNegate,
     "rotateCw": rotateCw,
     "rotateCcw": rotateCcw,
+    "orth": rotateCw,  # defaults to pi/2
     "vecFrom2Points": vecFrom2Points,
     "angleCcw": angleCcw,
     "angleCw": angleCw,
@@ -323,6 +542,8 @@ PRIMITIVES = {
 
 
 def hillClimbing(known, rules, not_equal, not_in, not_collinear, not_intersect_2_segments):
+    return solve_square(known, rules)
+    
     global global_rules, global_not_equal, global_not_in, global_not_collinear, global_not_intersect_2_segments
     global_not_equal = not_equal
     global_not_in = not_in

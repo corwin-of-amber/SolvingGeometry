@@ -50,7 +50,8 @@ def get_partial_prog_from_dl(exercise_name, dl_script_path=None):
     return partial_prog
 
 def is_point(val):
-    return isinstance(val, Point)
+    # @todo should depend on the backend used
+    return isinstance(val, Point) or (hasattr(val, 'x') and hasattr(val, 'y'))
 """
 def get_input_points(input_text):
     # Return the list of points in the input

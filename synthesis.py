@@ -362,8 +362,17 @@ def is_leave(term):
     return True
 
 def produce_constraint_helper(statement, known_symbols):
-    # Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
-    # Notice this function can return None for certain predicates
+    """
+    Gets a statement in the format the front sent to synthesis module. Returns an assert rule according to the numeric module api
+    Notice this function can return None for certain predicates
+    """
+
+    # angles (in range 0-2pi) need to be scaled relative to lengths :/
+    # this is a bit ad-hoc
+    SCALE_ANGLES = 5
+    def scale(expr, factor): return f"{factor} * ({expr})"
+    def scale_angle(expr): return scale(expr, SCALE_ANGLES)
+
     predicate = statement.predicate.lower()
     if predicate.startswith("draw"):
         # Draw predicates are only meant for the front
@@ -378,15 +387,15 @@ def produce_constraint_helper(statement, known_symbols):
         # dist(middle(A, B), O)
         return "assert", ("dist(middle({}, {}), {})").format(*statement.vars)
     elif predicate == "rightangle":
-        return "assert", ("angle({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
+        return "assert", scale_angle("angle({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
     elif predicate == "rightangleccw":
-        return "assert", ("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
+        return "assert", scale_angle("angleCcw({}, {}, {}) - {}".format(*statement.vars, deg_to_rad("90")))
     elif predicate == "angle":
         # angle means we dont care of its ccw or cw 
         # Notice there shouldnt be an angle in degrees here
-        return "assert", "angle({}, {}, {}) - {}".format(*statement.vars)
+        return "assert", scale_angle("angle({}, {}, {}) - {}".format(*statement.vars))
     elif predicate == "angleccw":
-        return "assert", "angleCcw({}, {}, {}) - {}".format(*statement.vars)
+        return "assert", scale_angle("angleCcw({}, {}, {}) - {}".format(*statement.vars))
     elif predicate == "notcolinear":
         return "not_colinear", statement.vars
     elif predicate == "dist":
