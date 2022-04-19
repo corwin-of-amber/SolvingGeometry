@@ -31,7 +31,7 @@ class TestFixture:
         print("Partial program is: ")
         print(partial_prog)
         print("Perform numeric search")
-        results = hillClimbing.hillClimbing(partial_prog.known, partial_prog.rules, not_equal=partial_prog.not_equal_rules, not_in=partial_prog.not_in_rules, not_collinear=partial_prog.not_colinear, not_intersect_2_segments=partial_prog.not_intersect_2_segments)
+        results = hillClimbing.solve_numerical(partial_prog.known, partial_prog.rules, not_equal=partial_prog.not_equal_rules, not_in=partial_prog.not_in_rules, not_collinear=partial_prog.not_colinear, not_intersect_2_segments=partial_prog.not_intersect_2_segments)
         print("numeric search results are: ")
         print(results)
         return {'partial_prog': partial_prog.rules, 'solution': self._serialize(results)}

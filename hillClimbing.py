@@ -237,7 +237,6 @@ class Eval:
     def compile(self, prog, inputs=[]):
         vardecls = inputs[:]
         def expression(expr):
-            print(vardecls, expr)
             return self._compile_func(vardecls, expr)
         def statement(stmt):
             op, expr = stmt[0], stmt[-1]
@@ -282,65 +281,15 @@ def positional(arg_names, f):
     return lambda d: f(*(d[v] for v in arg_names))
 
 
-def solve_square(known, rules):
-    from backend_shapely import Point, dist, circle, linevec, intersection, orth, vecFrom2Points, middle, angle
-    import backend_shapely
-
-    #known = {'A': Point(0, 0), 'B': Point(100, 0)}
-
-    def compfunc(params, body):
-        if isinstance(body, list):
-            body = f"[{', '.join(body)}]"  # yuck
-        return positional(params, eval(f"lambda {','.join(params)}: {body}", vars(backend_shapely)))
-
-    def addfuncs(*fs):
-        return lambda env: sum(f(env) for f in fs)
-
-    rules_ = [
-        ['{}', [
-            [':=', 'd', 'dist(A, B)'],
-            ['assert', 'abs(dist(A, B) - d)']
-        ]],
-        [':in', 'C', ['circle(B, dist(A, B))']],
-        [':in', 'D', ['circle(C, dist(A, B))', 'linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))']],
-        ['assert', 'abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(angle(A, D, C) - 0.5*pi)']
-    ]
-
-    too_close = lambda a, b: dist(a, b) < 10
-    penalize = lambda env: sum(10 if a in env and b in env and too_close(env[a], env[b]) else 0
-                               #for a, b in [('B', 'D'), ('A', 'C')])
-                               for a in 'ABCD' for b in 'ABCD' if a < b)
-
-    prog = Interp.Prog(inputs=['A', 'B'], 
-        statements=[
-        [':=', 'd', compfunc(['A', 'B'], 'dist(A, B)')], #positional(['A', 'B'], lambda A, B: dist(A, B))],
-        [':in', 'C', 1, compfunc(['A', 'B', 'd'], 'circle(B, dist(A, B))')],
-        #positional(['A', 'B', 'd'],
-                        #lambda A, B, d: circle(B, dist(A, B)))],
-        [':in', 'D', 0, compfunc(['A', 'B', 'd', 'C'],
-            ['circle(C, dist(A, B))', 'linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))'])],
-        #positional(['A', 'B', 'd', 'C'],
-        #                lambda A, B, d, C: intersection(circle(C, dist(A, B)),
-        #                    linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))))],
-        ['assert', addfuncs(
-            compfunc(['A', 'B', 'd', 'C', 'D'], #'abs(angle(A, D, C) - 0.5*pi)'),
-            'abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(angle(A, D, C) - 0.5*pi) * 5'),
-            penalize)
-        ]
-        #positional(['A', 'B', 'd', 'C', 'D'],
-        #lambda A, B, d, C, D: abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(dist(A, C) - dist(B, D)) + abs(angle(A, D, C) - 0.5*math.pi)
-        #    + (10 if too_close(B, D) else 0)
-        #    + (10 if too_close(A, C) else 0))]
-    ])
-
+def solve_numerical(known, rules, not_equal, not_in, not_collinear, not_intersect_2_segments):
     interp = Interp(rules, inputs=list(known.keys()))
 
     sol = interp(known)
-    print(sol)
     return sol[1]
 
 
-def solveHillClimbing(rule_index, known):
+
+def solveHillClimbing_old(rule_index, known):
     rule = global_rules[rule_index]
     current_known = copy.deepcopy(known)
     if rule_index == 0: #assert with only 0-dimensions
@@ -447,13 +396,7 @@ def solveHillClimbing(rule_index, known):
 
 
 
-def hillClimbing(known, rules, not_equal, not_in, not_collinear, not_intersect_2_segments):
-    interp = Interp(rules, inputs=list(known.keys()))
-
-    sol = interp(known)
-    print(sol)
-    return sol[1]
-    
+def hillClimbing_old(known, rules, not_equal, not_in, not_collinear, not_intersect_2_segments):
     global global_rules, global_not_equal, global_not_in, global_not_collinear, global_not_intersect_2_segments
     global_not_equal = not_equal
     global_not_in = not_in

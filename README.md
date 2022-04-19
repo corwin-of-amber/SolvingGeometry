@@ -11,6 +11,8 @@ inference. It then employs SciPy and SymPy for the numerical optimization proble
    * pyparsing
    * scipy
    * sympy
+   * shapely
+   * flask
  * Node.js 16.x
    * (+ NPM)
  * Soufflé
