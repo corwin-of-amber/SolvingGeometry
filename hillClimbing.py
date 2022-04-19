@@ -19,80 +19,6 @@ global_not_in = []
 global_not_collinear = []
 global_not_intersect_2_segments = []
 
-def circleCenter(c):
-    return c.center
-
-def circleFromDiameter(s):
-    return Circle(s.midpoint, s.length)
-
-def middle1(p1, p3):
-    return 2*p3 - p1
-
-def middle(p1, p2):
-    return (p1+p2)/2
-
-def vecOpNegate(vec):
-    return Point(-vec.x, -vec.y)
-
-def vecFrom2Points(p1, p2):
-    return Point(p2.x-p1.x, p2.y-p1.y)
-
-def rayVec(p, vec):
-    return Ray(p, Point(p.x+vec.x, p.y+vec.y))
-
-def lineVec(p, vec):
-    return Line(p, Point(p.x + vec.x, p.y + vec.y))
-
-def rotateCcw(vec, angle=pi/2):
-    return vec.rotate(angle)
-
-def rotateCw(vec, angle=pi/2):
-    angle = angle % (2*pi)
-    angle = 2*pi - angle
-    return vec.rotate(angle)
-
-def dist(p1, p2):
-    return p1.distance(p2)
-
-def angleCcw(p1, p2, p3): #CCW - TODO make sure it is ok
-    l1 = Point(p1.x-p2.x,p1.y-p2.y)
-    l3 = Point(p3.x-p2.x,p3.y-p2.y)
-    val = math.atan2(l3.y, l3.x) - math.atan2(l1.y, l1.x)
-    return val if val > 0 else 2*pi + val
-
-def angleCw(p1, p2, p3): #CW
-    return 2*pi - angleCcw(p1, p2, p3)
-
-def angle(p1, p2, p3):
-    return min(angleCw(p1, p2, p3), angleCcw(p1, p2, p3))
-
-def smallestAngle(p1, p2, p3):
-    l1 = Line(p1,p2)
-    l3 = Line(p2,p3)
-    return l1.smallest_angle_between(l3)
-
-def ray_domain(r):
-    return lambda t: r.points[0] + r.direction * t
-
-def line_domain(l):
-    return lambda t: l.points[0] + l.direction * t
-
-def segment_domain(s):
-    return lambda t: s.points[0] + s.direction * t
-
-def circle_domain(c): #TODO: I haven't set boundary for the minimize function, but this works
-    return lambda t: Point(N(c.radius*sympy.cos(2*pi*t)), N(c.radius*sympy.sin(2*pi*t))) + c.center
-
-def get_domain(entity):
-    if type(entity) is sympy.geometry.line.Ray2D:
-        return ray_domain(entity)
-    elif type(entity) is sympy.geometry.line.Line2D:
-        return line_domain(entity)
-    elif type(entity) is sympy.geometry.line.Segment2D:
-        return segment_domain(entity)
-    elif type(entity) is sympy.geometry.ellipse.Circle:
-        return circle_domain(entity)
-    return None
 
 def is_duplicate(known, p):
     for k in known.values():
@@ -197,43 +123,15 @@ def handle_not_intersect_2_segments(current_known, main_var, intersection_res):
 
 
 
-def positional(arg_names, f):
-    arg_names = arg_names[:]
-    return lambda d: f(*(d[v] for v in arg_names))
-
-def solve_triangle(known):
-    #known = {'X': Point(0, 0), 'Z': Point(136, 0), 'num_0': 136}
-    rules=[
-        [':in', 'Y', ['circle(Z, num_0)', 'linevec((middle(X, Z)), (orth(vecFrom2Points(X, Z))))']],
-        ['assert', 'abs(dist(X, Y) - num_0) + abs(dist(Z, Y) - num_0)'],
-    ]
-
-    circle = Circle; linevec = lineVec
-
-    prog = [
-        [':in', 'Y', positional(['X', 'Z', 'num_0'],
-                     lambda X, Z, num_0: intersection(circle(Z, num_0), 
-                                                      linevec(middle(X, Z),
-                                                              rotateCw(vecFrom2Points(X, Z)))))]
-    ]
-    objfunc = positional(['X', 'Z', 'num_0', 'Y'],
-        lambda X, Z, num_0, Y: abs(dist(X, Y) - num_0) + abs(dist(Z, Y) - num_0))
-
-    sol = [(objfunc({**known, 'Y': Y}), {**known, 'Y': Y})
-            for Y in prog[0][2](known)]
-
-    print(sol)
-    return min(sol, key=lambda tup: tup[0])
-
 
 class Interp:
-    class Prog(namedtuple('Prog', 'statements')):
+    class Prog(namedtuple('Prog', 'inputs statements')):
         pass
 
     def __init__(self, prog, inputs=[], backend=backend_shapely):
         self.backend = backend
         if not isinstance(prog, Interp.Prog):
-            prog = Interp.Prog(Eval(self.backend).compile(prog, inputs))
+            prog = self.compile_program(prog, inputs)
         self.prog = prog
 
     def __call__(self, known):
@@ -241,13 +139,15 @@ class Interp:
         return self._bind_stmts(self.prog.statements, None)(env)
 
     def _init(self, known):
-        # @oops specific to shapely
-        from shapely.geometry import Point
-        return {k: Point(v.x, v.y) for k, v in known.items()}
+        # @todo should be in the backend, currently this looks awkward
+        return {k: self.backend.Point(v.x, v.y) if self.backend.is_point(v) else v for k, v in known.items()}
+
+    def _bind(self, key, expr, cont):
+        return lambda env: cont({**env, key: expr(env)})
 
     def _bind0(self, key, locus_expr, cont):
         def objfunc0(env):
-            domain = self._intersection(locus_expr(env))
+            domain = self.get_domain0(self._intersection(locus_expr(env)))
             if not domain: return (math.inf, env)
             sol = [cont({**env, key: val}) for val in domain]
             return min(sol, key=lambda tup: tup[0])
@@ -268,7 +168,7 @@ class Interp:
         op = stmt[0]
         if op == ':=':
             _, key, expr = stmt
-            return self._bind0(key, lambda env: [expr(env)], cont)
+            return self._bind(key, expr, cont)
         elif op == ':in':
             _, key, dim, expr = stmt
             if dim == 0:  return self._bind0(key, expr, cont)
@@ -276,6 +176,10 @@ class Interp:
         elif op == 'assert':
             _, expr = stmt
             return self._ret(expr)  # note: needs to be last in block
+        elif op == '{}':
+            return self._bind_block(stmt[1], cont)
+        else:
+            raise NotImplementedError
 
     def _bind_stmts(self, stmts, cont):
         if stmts:
@@ -283,24 +187,41 @@ class Interp:
         else:
             return cont
     
+    def _bind_block(self, stmts, cont):
+        ''' *Solves* the block and binds a single (best) solution to the cont. '''
+        block = self._bind_stmts(stmts, None)
+        return lambda env: cont(block(env)[1])
+
     def _intersection(self, shapes):
-        from backend_shapely import intersection
         if isinstance(shapes, list) and not isinstance(shapes[0], float):  # todo clean up this corner case
             if len(shapes) == 1: return shapes[0]
-            else: return intersection(*shapes)
+            else: return self.backend.intersection(*shapes)
         else:
             return shapes
 
     def get_domain0(self, shape):
-        return list(shape.geoms)
+        return shape if isinstance(shape, list) \
+                     else self.backend.get_points(shape)
 
     def get_domain1(self, shape):
-        # @oops this is specific to shapely
-        return lambda t: shape.interpolate(t)
+        return self.backend.get_search_range(shape)
 
     def minimize(self, func):
         return minimize(lambda t: abs(func(t[0])[0]), 5.0, method="Powell", tol=1e-9).x[0]
-        return minimize_scalar(lambda t: abs(func(t)[0]), tol=1e-9).x
+        #return minimize_scalar(lambda t: abs(func(t)[0]), tol=1e-9).x
+
+    def compile_program(self, prog, inputs):
+        # - chunk the program according to asserts
+        chunked = []; term = False
+        for stmt in prog:
+            if term: chunked = [['{}', chunked]]
+            chunked.append(stmt)
+            term = (stmt[0] == 'assert')
+
+        assert term  # last statement should be an assert
+
+        return Interp.Prog(inputs=inputs,
+            statements=Eval(self.backend).compile(chunked, inputs))
 
 
 class Eval:
@@ -320,7 +241,7 @@ class Eval:
             return self._compile_func(vardecls, expr)
         def statement(stmt):
             op, expr = stmt[0], stmt[-1]
-            cexpr = expression(expr)
+            cexpr = expression(expr) if op != '{}' else None
             if op in [':=', ':in']:
                 vardecls.append(stmt[1])
             if op == ':=':
@@ -330,6 +251,8 @@ class Eval:
                 return [*stmt[:-1], dim, cexpr]
             elif op == 'assert':
                 return [*stmt[:-1], self._add_funcs(cexpr, self.penalties)]
+            elif op == '{}':
+                return [*stmt[:-1], [statement(stmt) for stmt in stmt[-1]]]
             else:
                 raise NotImplementedError
 
@@ -350,6 +273,15 @@ class Eval:
         return sum(10 if too_close(p1, p2) else 0 for p1, p2 in itertools.combinations(points, 2))
 
 
+def positional(arg_names, f):
+    '''
+    Auxiliary function for transforming a function with named arguments to
+      a function with a single dictionary argument.
+    '''
+    arg_names = arg_names[:]
+    return lambda d: f(*(d[v] for v in arg_names))
+
+
 def solve_square(known, rules):
     from backend_shapely import Point, dist, circle, linevec, intersection, orth, vecFrom2Points, middle, angle
     import backend_shapely
@@ -364,22 +296,23 @@ def solve_square(known, rules):
     def addfuncs(*fs):
         return lambda env: sum(f(env) for f in fs)
 
-    rules_=[
-        [':=', 'd', 'dist(A, B)'],
-        #['assert', 'abs(dist(A, B) - d)'],
+    rules_ = [
+        ['{}', [
+            [':=', 'd', 'dist(A, B)'],
+            ['assert', 'abs(dist(A, B) - d)']
+        ]],
         [':in', 'C', ['circle(B, dist(A, B))']],
         [':in', 'D', ['circle(C, dist(A, B))', 'linevec((middle(A, C)), (orth(vecFrom2Points(A, C))))']],
         ['assert', 'abs(dist(B, C) - d) + abs(dist(C, D) - d) + abs(dist(D, A) - d) + abs(angle(A, D, C) - 0.5*pi)']
     ]
-
-    del rules[1]
 
     too_close = lambda a, b: dist(a, b) < 10
     penalize = lambda env: sum(10 if a in env and b in env and too_close(env[a], env[b]) else 0
                                #for a, b in [('B', 'D'), ('A', 'C')])
                                for a in 'ABCD' for b in 'ABCD' if a < b)
 
-    prog = Interp.Prog(statements=[
+    prog = Interp.Prog(inputs=['A', 'B'], 
+        statements=[
         [':=', 'd', compfunc(['A', 'B'], 'dist(A, B)')], #positional(['A', 'B'], lambda A, B: dist(A, B))],
         [':in', 'C', 1, compfunc(['A', 'B', 'd'], 'circle(B, dist(A, B))')],
         #positional(['A', 'B', 'd'],
@@ -400,9 +333,7 @@ def solve_square(known, rules):
         #    + (10 if too_close(A, C) else 0))]
     ])
 
-    #prog = Interp.Prog(statements=Eval(backend_shapely).compile(rules, ['A', 'B']))
-
-    interp = Interp(rules, inputs=['A', 'B'])
+    interp = Interp(rules, inputs=list(known.keys()))
 
     sol = interp(known)
     print(sol)
@@ -515,34 +446,13 @@ def solveHillClimbing(rule_index, known):
         return solveHillClimbing(current_index, current_known)
 
 
-PRIMITIVES = {
-    "sqrt": sqrt,
-    "pi": pi,
-    "Point": Point,
-    "circle": Circle,
-    "rayvec": rayVec,
-    "linevec": lineVec,
-    "segment": Segment,
-    "dist": dist,
-    "vecOpNegate": vecOpNegate,
-    "rotateCw": rotateCw,
-    "rotateCcw": rotateCcw,
-    "orth": rotateCw,  # defaults to pi/2
-    "vecFrom2Points": vecFrom2Points,
-    "angleCcw": angleCcw,
-    "angleCw": angleCw,
-    "angle": angle,
-    "smallestAngle": smallestAngle,
-    "intersection": intersection,
-    "circleCenter": circleCenter,
-    "circleFromDiameter": circleFromDiameter,
-    "middle": middle,
-    "middle1": middle1
-}
-
 
 def hillClimbing(known, rules, not_equal, not_in, not_collinear, not_intersect_2_segments):
-    return solve_square(known, rules)
+    interp = Interp(rules, inputs=list(known.keys()))
+
+    sol = interp(known)
+    print(sol)
+    return sol[1]
     
     global global_rules, global_not_equal, global_not_in, global_not_collinear, global_not_intersect_2_segments
     global_not_equal = not_equal

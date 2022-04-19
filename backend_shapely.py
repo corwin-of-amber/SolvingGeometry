@@ -4,6 +4,9 @@ from shapely.geometry import Point, MultiPoint, LineString
 from shapely.affinity import rotate as arotate
 
 
+def is_point(p):
+    return hasattr(p, 'x') and hasattr(p, 'y')
+
 def vecFrom2Points(p1, p2):
     return sub(p2, p1)
 def dist(p1, p2):
@@ -14,8 +17,17 @@ def linevec(p, vec):
     p1 = Point(p.x + vec.x * 1000, p.y + vec.y * 1000)
     p2 = Point(p.x - vec.x * 1000, p.y - vec.y * 1000)
     return LineString([p1, p2])
-def rotateCw(p, angle):
+def rayvec(p, vec):
+    p1 = Point(p.x + vec.x * 1000, p.y + vec.y * 1000)
+    return LineString([p, p1])
+#rayvec = linevec
+def rotateCcw(p, angle):
     return arotate(p, angle, origin=(0,0), use_radians=True)
+def rotateCw(p, angle):
+    return rotateCcw(p, -angle)
+
+def segment(p1, p2):
+    return LineString([p1, p2])
 
 def sub(p1, p2):
     return Point(p1.x - p2.x, p1.y - p2.y)
@@ -35,23 +47,28 @@ def angle(p1, p2, p3):
 def circle(p, r):
     return p.buffer(r).boundary
 
-def intersection(*shapes):
-    return reduce(intersection2, shapes)
+def circleCenter(c):
+    return c.centroid
 
-def intersection2(shape1, shape2):
-    isect = shape1.intersection(shape2)
-    if isinstance(isect, MultiPoint):
-        return list(isect.geoms)
-    elif isect.empty:
+def circleFromDiameter(s):
+    return circle(s.centroid, s.length)
+
+def intersection(*shapes):
+    return reduce(lambda shape1, shape2: shape1.intersection(shape2), shapes)
+
+def get_points(shape):
+    if isinstance(shape, MultiPoint):
+        return list(shape.geoms)
+    elif shape.is_empty:
         return []
     else:
-        print('****', isect)
-        return isect.centroid  # appoximate with Point
+        return [shape.centroid]  # approximate with single point
 
 orth = lambda p: rotateCw(p, math.pi/2)
 
 
-def get_domain(shape):
+# @todo return boundaries as well?
+def get_search_range(shape):
     return lambda t: shape.interpolate(t)
 
 pi = math.pi

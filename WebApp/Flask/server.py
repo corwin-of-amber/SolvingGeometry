@@ -5,8 +5,8 @@ import parser
 import samples
 import synthesis
 import hillClimbing
-from sympy.geometry import Point
 from collections import namedtuple
+import backend_shapely as backend
 
 HOST = 'localhost'
 PORT = 8000
@@ -72,7 +72,7 @@ def synthesize_and_solve(input_text):
     out_points = {}
     # Results is a dictionary
     for var_name, val in results.items():
-        if isinstance(val, Point):
+        if backend.is_point(val):
             out_points[var_name] = (val.x, val.y)
             
     # Get segments and circles to draw

@@ -369,7 +369,7 @@ def produce_constraint_helper(statement, known_symbols):
 
     # angles (in range 0-2pi) need to be scaled relative to lengths :/
     # this is a bit ad-hoc
-    SCALE_ANGLES = 5
+    SCALE_ANGLES = 20
     def scale(expr, factor): return f"{factor} * ({expr})"
     def scale_angle(expr): return scale(expr, SCALE_ANGLES)
 
