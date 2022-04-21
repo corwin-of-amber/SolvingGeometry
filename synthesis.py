@@ -236,8 +236,8 @@ relations = {
 make_relations = [rel for rel in relations.values() if rel.is_make_relation]
 
 def run_souffle(souffle_script):
-    os.system("souffle -w -F {souffle_in_dir} {script} -D {souffle_out_dir} -I {include_dir}".format(
-    souffle_in_dir=souffle_in_dir, script=souffle_script, souffle_out_dir=souffle_out_dir, include_dir="."))
+    cfg = souffle_config
+    os.system(f"souffle -w -F {cfg['in_dir']} {souffle_script} -D {cfg['out_dir']} -I {cfg['include_dir']}")
 
 # Functions to parse the results of the deduction
 def find_all_locations(obj_id):
@@ -343,7 +343,7 @@ def get_reason(symbol_name):
                 return row[1], row[2:]
                 
         f.close()
-    # If couldn't find a predicate - than this is a leaves
+    # If couldn't find a predicate - then this is a leaf
     raise AssertionError(f"Couldnt find apply rule for '{symbol_name}'")
     
 
@@ -667,12 +667,13 @@ def deductive_synthesis(exercise, partial_prog, statements):
 # Functions to prepare for the deduction part
 
 def create_folder():
+    cfg = souffle_config
     #TODO: create empty facts files
-    if (not os.path.isdir(souffle_main_dir)):
-        os.mkdir(souffle_main_dir)
-    if (os.path.isdir(souffle_out_dir)):
-        shutil.rmtree(souffle_out_dir)
-    os.mkdir(souffle_out_dir)
+    if (not os.path.isdir(cfg['main_dir'])):
+        os.mkdir(cfg['main_dir'])
+    if (os.path.isdir(cfg['out_dir'])):
+        shutil.rmtree(cfg['out_dir'])
+    os.mkdir(cfg['out_dir'])
 
 def move_input_to_folder():
     # deprecated
@@ -684,12 +685,22 @@ def move_input_to_folder():
             shutil.copyfile(os.path.join(in_dir, file_name), os.path.join(souffle_in_dir, file_name))
 
 def define_souffle_vars(exercise_name):
+    dir_path = os.path.dirname(__file__)
+
+    # @oops should not be global
     global souffle_main_dir
-    souffle_main_dir = "souffleFiles"
+    souffle_main_dir = os.path.join(dir_path, "souffleFiles")
     global souffle_in_dir
     souffle_in_dir = os.path.join(souffle_main_dir, exercise_name)
     global souffle_out_dir
     souffle_out_dir = os.path.join(souffle_main_dir, exercise_name)
+    global souffle_config
+    souffle_config = dict(
+        main_dir=souffle_main_dir,
+        in_dir=souffle_in_dir,
+        out_dir=souffle_out_dir,
+        include_dir=dir_path
+    )
 
 
 def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=True):
@@ -716,15 +727,16 @@ def main(exercise_name=None, exercise=None, statements=[], write_output_to_file=
     partial_prog.produce_known(exercise.known_symbols)
     deductive_synthesis(exercise, partial_prog, statements)
     
+    out_dir = souffle_config['out_dir']
     if write_output_to_file:
-        f = open(os.path.join(souffle_out_dir, exercise_name + ".out.txt"), "w")
+        f = open(os.path.join(out_dir, exercise_name + ".out.txt"), "w")
         f.write(str(partial_prog))
         f.close()        
     return partial_prog
     
       
 if __name__ == "__main__":
-    # Basiccaly everything here shouldn't happen when running the whole program (the input should come from the front and the output should go to the numeric search
+    # Basically everything here shouldn't happen when running the whole program (the input should come from the frontend and the output should go to the numeric solver)
 
     # This is an example of useing synthesis straight from dl file
     exercise_name = "pentagon"
