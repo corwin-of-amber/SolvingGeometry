@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1 (c4e8f9e, 2021-05-24)"
+   sodipodi:docname="icons.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.8237529"
+     inkscape:cx="266.20931"
+     inkscape:cy="249.75972"
+     inkscape:window-width="1312"
+     inkscape:window-height="787"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <circle
+       style="fill:none;stroke:#43515a;stroke-width:1.32292;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;opacity:0.17363344"
+       id="path31"
+       cx="67.842636"
+       cy="72.270943"
+       r="9.4704294"
+       inkscape:export-filename="/Users/corwin/Documents/path31.png"
+       inkscape:export-xdpi="566.08002"
+       inkscape:export-ydpi="566.08002" />
+    <rect
+       style="fill:none;stroke:#43515a;stroke-width:1.35998;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1114"
+       width="21.613602"
+       height="21.578352"
+       x="57.00098"
+       y="61.491238"
+       inkscape:export-filename="/Users/corwin/Documents/path31.png"
+       inkscape:export-xdpi="566.08002"
+       inkscape:export-ydpi="566.08002" />
+    <rect
+       style="fill:none;stroke:#43515a;stroke-width:0.933498;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1114-0"
+       width="14.835695"
+       height="14.811499"
+       x="81.118668"
+       y="37.095558"
+       transform="rotate(20.137906)"
+       inkscape:export-filename="/Users/corwin/Documents/path31.png"
+       inkscape:export-xdpi="566.08002"
+       inkscape:export-ydpi="566.08002" />
+    <circle
+       style="opacity:0.29903537;fill:none;stroke:#43515a;stroke-width:1.32292;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path31-3"
+       cx="101.15304"
+       cy="72.093452"
+       r="9.4704294"
+       inkscape:export-filename="/Users/corwin/Documents/path31.png"
+       inkscape:export-xdpi="566.08002"
+       inkscape:export-ydpi="566.08002" />
+    <rect
+       style="fill:none;stroke:#43515a;stroke-width:1.35998;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1114-6"
+       width="21.613602"
+       height="21.578352"
+       x="90.311386"
+       y="61.313751"
+       inkscape:export-filename="/Users/corwin/Documents/path31.png"
+       inkscape:export-xdpi="566.08002"
+       inkscape:export-ydpi="566.08002" />
+    <rect
+       style="fill:none;stroke:#43515a;stroke-width:0.933498;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1114-0-5"
+       width="14.835695"
+       height="14.811499"
+       x="112.33159"
+       y="25.460781"
+       transform="rotate(20.137906)"
+       inkscape:export-filename="/Users/corwin/Documents/path31.png"
+       inkscape:export-xdpi="566.08002"
+       inkscape:export-ydpi="566.08002" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.07167px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.101792"
+       x="61.293331"
+       y="53.776798"
+       id="text2703"><tspan
+         sodipodi:role="line"
+         id="tspan2701"
+         style="stroke-width:0.101792"
+         x="61.293331"
+         y="53.776798">favicon</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.07167px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.101792"
+       x="95.239799"
+       y="53.318123"
+       id="text2703-4"><tspan
+         sodipodi:role="line"
+         id="tspan2701-1"
+         style="stroke-width:0.101792"
+         x="95.239799"
+         y="53.318123">logo</tspan></text>
+  </g>
+</svg>
