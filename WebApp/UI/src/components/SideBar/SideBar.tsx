@@ -130,7 +130,7 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
 
 
     async getSamples() {
-        const samples = await (await fetch('/samples')).json();
+        const samples = await (await fetch('samples')).json();
         try {
             this.setState({samples, sampleNames: Object.keys(samples)});
         }
@@ -146,13 +146,13 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
     }
 
     compileText(programText: string): Promise<{statements: Statement[]}> {
-        return this.postText('/compile', programText);
+        return this.postText('compile', programText);
     }
     presolveText(programText: string): Promise<ServerResponse> {
-        return this.postText('/presolve', programText);
+        return this.postText('presolve', programText);
     }
     solveText(programText: string): Promise<ServerResponse> {
-        return this.postText('/solve', programText);
+        return this.postText('solve', programText);
     }
 
     async postText(path: string, programText: string) {

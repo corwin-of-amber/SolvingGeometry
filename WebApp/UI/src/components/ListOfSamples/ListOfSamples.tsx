@@ -19,8 +19,12 @@ export class ListOfSamples extends React.Component<ListOfSamplesProps> {
 
     render() {
         return (
-            <select ref={this.el} onChange={this.handleChange} disabled={this.props.disabled}>
-                {this.props.sampleNames.map((name: string) => <option key={name} value={name}>{name}</option>)}
+            <select ref={this.el} disabled={this.props.disabled}
+                    onChange={this.handleChange}>
+                <optgroup label="samples">
+                    {this.props.sampleNames.map((name: string) =>
+                        <option key={name} value={name}>{name}</option>)}
+                </optgroup>
             </select>
         );
     }

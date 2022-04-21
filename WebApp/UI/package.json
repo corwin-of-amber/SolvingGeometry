@@ -2,6 +2,7 @@
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
+  "homepage": "./",
   "dependencies": {
     "@codemirror/basic-setup": "^0.19.1",
     "@codemirror/state": "^0.19.9",
